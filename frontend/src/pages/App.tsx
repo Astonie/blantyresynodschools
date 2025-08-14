@@ -4,6 +4,8 @@ import LandingPage from './LandingPage'
 import LoginPage from './LoginPage'
 import SuperAdminLoginPage from './SuperAdminLoginPage'
 import SuperAdminDashboard from './SuperAdminDashboard'
+import SuperAdminLayout from './SuperAdminLayout'
+import TenantManagementPage from './TenantManagementPage'
 import DashboardPage from './DashboardPage'
 import StudentsPage from './StudentsPage'
 import FinancePage from './FinancePage'
@@ -61,12 +63,14 @@ export default function App() {
         <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
         
         {/* Super Admin routes */}
-        <Route
-          path="/super-admin"
-          element={isSuperAdminAuthed() ? <SuperAdminDashboard /> : <Navigate to="/super-admin/login" replace />}
-        >
-          <Route path="dashboard" element={<SuperAdminDashboard />} />
-        </Route>
+          <Route
+            path="/super-admin"
+            element={isSuperAdminAuthed() ? <SuperAdminLayout /> : <Navigate to="/super-admin/login" replace />}
+          >
+            <Route path="dashboard" element={<SuperAdminDashboard />} />
+            {/* Super admin routes do not use tenant permission guard */}
+            <Route path="tenants" element={<TenantManagementPage />} />
+          </Route>
         
         {/* Protected application routes */}
         <Route

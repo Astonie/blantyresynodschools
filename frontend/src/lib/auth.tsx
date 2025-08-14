@@ -42,8 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(res.data)
       } catch (e: any) {
         if (!mounted) return
-        setError(e?.response?.data?.detail || 'Failed to load user')
-        setUser(null)
+        
+        // Check if it's a session expiry or authentication error
+        const errorDetail = e?.response?.data?.detail || 'Failed to load user'
+        if (errorDetail.includes('Session expired') || 
+            errorDetail.includes('Invalid token') || 
+            e?.response?.status === 401) {
+          // Clear auth and redirect to login
+          localStorage.removeItem('token')
+          setUser(null)
+          window.location.href = '/login'
+          return
+        }
+        
+        // For other errors, just set the error but don't clear user
+        setError(errorDetail)
       } finally {
         if (mounted) setIsLoading(false)
       }

@@ -22,7 +22,7 @@ import {
   Divider
 } from '@chakra-ui/react'
 import { ViewIcon, ViewOffIcon, LockIcon } from '@chakra-ui/icons'
-import { api } from '../lib/api'
+import { superAdminApi } from '../lib/superAdminApi'
 import { useNavigate } from 'react-router-dom'
 
 export default function SuperAdminLoginPage() {
@@ -50,12 +50,12 @@ export default function SuperAdminLoginPage() {
     setIsLoading(true)
     
     try {
-      const response = await api.post('/auth/super-admin/login', {
+      const response = await superAdminApi.post('/auth/super-admin/login', {
         username,
         password
       })
       
-      const { access_token } = response.data
+      const { access_token } = response.data ?? response
       
       // Store the super admin token
       localStorage.setItem('super_admin_token', access_token)

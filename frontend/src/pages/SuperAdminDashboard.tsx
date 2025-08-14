@@ -5,7 +5,6 @@ import {
   Heading,
   Text,
   VStack,
-  HStack,
   SimpleGrid,
   Card,
   CardBody,
@@ -23,22 +22,14 @@ import {
   Th,
   Td,
   Badge,
-  Flex,
-  Spacer,
   Alert,
   AlertIcon,
   Spinner,
-  useColorModeValue
+  useColorModeValue,
+  HStack
 } from '@chakra-ui/react'
-import { 
-  StarIcon, 
-  UserIcon, 
-  ShieldIcon, 
-  LockIcon,
-  SettingsIcon,
-  ArrowForwardIcon
-} from '@chakra-ui/icons'
-import { api } from '../lib/api'
+import { SettingsIcon, ArrowForwardIcon } from '@chakra-ui/icons'
+import { superAdminApi } from '../lib/superAdminApi'
 import { useNavigate } from 'react-router-dom'
 
 interface Tenant {
@@ -78,11 +69,7 @@ export default function SuperAdminDashboard() {
   const loadSystemInfo = async () => {
     try {
       setIsLoadingStats(true)
-      const response = await api.get('/settings/super-admin/system-info', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('super_admin_token')}`
-        }
-      })
+      const response = await superAdminApi.get('/settings/super-admin/system-info')
       
       const data = response.data
       setSystemStats(data.statistics)
@@ -132,36 +119,8 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <Box minH="100vh" bg="gray.50">
-      {/* Header */}
-      <Box bg={bgColor} borderBottom="1px" borderColor={borderColor} py={4}>
-        <Container maxW="container.xl">
-          <Flex align="center" justify="space-between">
-            <HStack spacing={4}>
-              <StarIcon color="blue.500" boxSize={6} />
-              <VStack align="start" spacing={0}>
-                <Heading size="md" color="blue.600">
-                  Super Administrator Dashboard
-                </Heading>
-                <Text fontSize="sm" color="gray.600">
-                  System-wide administration and management
-                </Text>
-              </VStack>
-            </HStack>
-            <Button
-              colorScheme="red"
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-          </Flex>
-        </Container>
-      </Box>
-
-      <Container maxW="container.xl" py={8}>
-        <VStack spacing={8} align="stretch">
+    <Container maxW="container.xl" py={8}>
+      <VStack spacing={8} align="stretch">
           {/* System Overview */}
           <Box>
             <Heading size="lg" mb={6}>System Overview</Heading>
@@ -283,6 +242,13 @@ export default function SuperAdminDashboard() {
                     >
                       Go to Tenant Dashboard
                     </Button>
+                    <Button
+                      colorScheme="purple"
+                      variant="outline"
+                      onClick={() => navigate('/super-admin/tenants')}
+                    >
+                      Manage All Tenants
+                    </Button>
                   </HStack>
                 </VStack>
               </CardBody>
@@ -342,8 +308,7 @@ export default function SuperAdminDashboard() {
               </CardBody>
             </Card>
           </Box>
-        </VStack>
-      </Container>
-    </Box>
+      </VStack>
+    </Container>
   )
 }

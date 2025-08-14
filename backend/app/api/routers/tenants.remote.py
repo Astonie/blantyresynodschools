@@ -10,7 +10,6 @@ from jose import JWTError, jwt
 from app.tenancy.deps import get_tenant_db
 from app.api.deps import get_current_user_id
 from app.core.config import settings
-from fastapi import Header
 
 router = APIRouter()
 security = HTTPBearer()
@@ -49,8 +48,6 @@ class TenantCreate(BaseModel):
     contact_phone: Optional[str] = None
     address: Optional[str] = None
     is_active: bool = True
-    enabled_modules: Optional[list[str]] = None  # e.g. ["students","finance","academic","teachers","communications"]
-    branding: Optional[dict] = None
 
 class TenantUpdate(BaseModel):
     name: Optional[str] = None
@@ -59,8 +56,6 @@ class TenantUpdate(BaseModel):
     contact_phone: Optional[str] = None
     address: Optional[str] = None
     is_active: Optional[bool] = None
-    enabled_modules: Optional[list[str]] = None
-    branding: Optional[dict] = None
 
 class TenantRead(BaseModel):
     id: int
@@ -74,8 +69,6 @@ class TenantRead(BaseModel):
     is_active: Optional[bool] = True
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
-    enabled_modules: Optional[list[str]] = None
-    branding: Optional[dict] = None
     user_count: int
     student_count: int
     teacher_count: int
@@ -102,7 +95,7 @@ def list_tenants(
     db = SessionLocal()
     try:
         query = """
-            SELECT t.id, t.name, t.slug, t.schema_name, t.is_active, t.contact_email, t.contact_phone, t.address, t.enabled_modules, t.branding, t.created_at, t.updated_at
+            SELECT t.id, t.name, t.slug, t.schema_name, t.created_at, t.updated_at
             FROM public.tenants t
             WHERE 1=1
         """
@@ -142,12 +135,6 @@ def list_tenants(
                 name=row.name,
                 slug=row.slug,
                 schema_name=row.schema_name,
-                is_active=bool(row.is_active) if row.is_active is not None else True,
-                contact_email=row.contact_email,
-                contact_phone=row.contact_phone,
-                address=row.address,
-                enabled_modules=row.enabled_modules,
-                branding=row.branding,
                 created_at=str(row.created_at) if row.created_at is not None else None,
                 updated_at=str(row.updated_at) if row.updated_at is not None else None,
                 user_count=user_count,
@@ -180,21 +167,15 @@ def create_tenant(
         result = db.execute(
             text(
                 """
-                INSERT INTO public.tenants(name, slug, schema_name, is_active, contact_email, contact_phone, address, enabled_modules, branding)
-                VALUES (:name, :slug, :schema_name, :is_active, :contact_email, :contact_phone, :address, :enabled_modules, :branding)
-                RETURNING id, name, slug, schema_name, is_active, contact_email, contact_phone, address, enabled_modules, branding, created_at, updated_at
+                INSERT INTO public.tenants(name, slug, schema_name)
+                VALUES (:name, :slug, :schema_name)
+                RETURNING id, name, slug, schema_name, created_at, updated_at
                 """
             ),
             {
                 "name": tenant_data.name,
                 "slug": tenant_data.slug,
                 "schema_name": tenant_data.slug,
-                "is_active": tenant_data.is_active,
-                "contact_email": tenant_data.contact_email,
-                "contact_phone": tenant_data.contact_phone,
-                "address": tenant_data.address,
-                "enabled_modules": (tenant_data.enabled_modules or ["students","finance","academic","teachers","communications"]),
-                "branding": (tenant_data.branding or {}),
             },
         )
         new_tenant = result.mappings().first()
@@ -212,12 +193,6 @@ def create_tenant(
             name=new_tenant.name,
             slug=new_tenant.slug,
             schema_name=new_tenant.schema_name,
-            is_active=bool(new_tenant.is_active) if new_tenant.is_active is not None else True,
-            contact_email=new_tenant.contact_email,
-            contact_phone=new_tenant.contact_phone,
-            address=new_tenant.address,
-            enabled_modules=new_tenant.enabled_modules,
-            branding=new_tenant.branding,
             created_at=str(new_tenant.created_at) if new_tenant.created_at else None,
             updated_at=str(new_tenant.updated_at) if new_tenant.updated_at else None,
             user_count=0,
@@ -245,33 +220,18 @@ def update_tenant(
         if not tenant:
             raise HTTPException(status_code=404, detail="Tenant not found")
 
-        # Build update set
-        fields = []
-        params = {"id": tenant_id}
-        if tenant_data.name is not None:
-            fields.append("name = :name"); params["name"] = tenant_data.name
-        if tenant_data.description is not None:
-            fields.append("description = :description"); params["description"] = tenant_data.description
-        if tenant_data.contact_email is not None:
-            fields.append("contact_email = :contact_email"); params["contact_email"] = tenant_data.contact_email
-        if tenant_data.contact_phone is not None:
-            fields.append("contact_phone = :contact_phone"); params["contact_phone"] = tenant_data.contact_phone
-        if tenant_data.address is not None:
-            fields.append("address = :address"); params["address"] = tenant_data.address
-        if tenant_data.is_active is not None:
-            fields.append("is_active = :is_active"); params["is_active"] = tenant_data.is_active
-        if tenant_data.enabled_modules is not None:
-            fields.append("enabled_modules = :enabled_modules"); params["enabled_modules"] = tenant_data.enabled_modules
-        if tenant_data.branding is not None:
-            fields.append("branding = :branding"); params["branding"] = tenant_data.branding
-        if not fields:
+        # Only allow name update for now
+        if tenant_data.name is None:
             raise HTTPException(status_code=400, detail="No updatable fields provided")
-        set_sql = ", ".join(fields) + ", updated_at = CURRENT_TIMESTAMP"
-        db.execute(text(f"UPDATE public.tenants SET {set_sql} WHERE id = :id"), params)
+
+        db.execute(
+            text("UPDATE public.tenants SET name = :name, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+            {"id": tenant_id, "name": tenant_data.name},
+        )
 
         # Refresh
         updated = db.execute(
-            text("SELECT id, name, slug, schema_name, is_active, contact_email, contact_phone, address, enabled_modules, branding, created_at, updated_at FROM public.tenants WHERE id = :id"),
+            text("SELECT id, name, slug, schema_name, created_at, updated_at FROM public.tenants WHERE id = :id"),
             {"id": tenant_id}
         ).mappings().first()
 
@@ -292,12 +252,6 @@ def update_tenant(
             name=updated.name,
             slug=updated.slug,
             schema_name=updated.schema_name,
-            is_active=bool(updated.is_active) if updated.is_active is not None else True,
-            contact_email=updated.contact_email,
-            contact_phone=updated.contact_phone,
-            address=updated.address,
-            enabled_modules=updated.enabled_modules,
-            branding=updated.branding,
             created_at=str(updated.created_at) if updated.created_at else None,
             updated_at=str(updated.updated_at) if updated.updated_at else None,
             user_count=user_count,
@@ -404,27 +358,6 @@ def get_tenant_stats(
             total_subjects=total_subjects,
             recent_activity=recent_activity,
         )
-    finally:
-        db.close()
-
-@router.get("/public/config")
-def public_tenant_config(slug: str = Query(..., description="Tenant slug")):
-    """Public endpoint to fetch branding and enabled modules by slug (no auth)."""
-    from app.db.session import SessionLocal
-    db = SessionLocal()
-    try:
-        row = db.execute(
-            text("SELECT name, slug, enabled_modules, branding FROM public.tenants WHERE slug = :slug AND is_active = true"),
-            {"slug": slug}
-        ).mappings().first()
-        if not row:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        return {
-            "name": row.name,
-            "slug": row.slug,
-            "enabled_modules": row.enabled_modules or [],
-            "branding": row.branding or {}
-        }
     finally:
         db.close()
 

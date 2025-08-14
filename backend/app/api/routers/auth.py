@@ -27,66 +27,29 @@ def login(payload: LoginRequest, db: Session = Depends(get_tenant_db)):
 
 @router.post("/super-admin/login", response_model=Token)
 def super_admin_login(payload: LoginRequest):
-    """Super admin login that works across all tenants."""
+    """Platform-level Super Admin login (no tenant context)."""
     from app.db.session import SessionLocal
-    
-    # Get all tenants
+
     db = SessionLocal()
     try:
-        tenants = db.execute(text("SELECT id, name, slug FROM tenants ORDER BY id")).mappings().all()
-        
-        # Try to find the super admin user in any tenant
-        super_admin_user = None
-        super_admin_tenant = None
-        
-        for tenant in tenants:
-            try:
-                # Set search path to this tenant
-                db.execute(text(f'SET LOCAL search_path TO "{tenant.slug}", public'))
-                
-                # Check if super admin exists in this tenant
-                user_row = db.execute(
-                    text("SELECT id, email, hashed_password, is_active FROM users WHERE email = :email"),
-                    {"email": payload.username}
-                ).first()
-                
-                if user_row:
-                    # Check if this user has Super Administrator role
-                    roles = db.execute(
-                        text("""
-                            SELECT r.name FROM roles r
-                            JOIN user_roles ur ON ur.role_id = r.id
-                            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
-                        """),
-                        {"user_id": user_row.id}
-                    ).scalars().all()
-                    
-                    if roles:
-                        super_admin_user = user_row
-                        super_admin_tenant = tenant
-                        break
-            except Exception as e:
-                # If there's an error with this tenant, continue to the next one
-                print(f"Error checking tenant {tenant.slug}: {e}")
-                continue
-        
-        if not super_admin_user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or not a Super Administrator")
-        
-        if not verify_password(payload.password, super_admin_user.hashed_password):
+        user_row = db.execute(
+            text("SELECT id, email, hashed_password, is_active FROM public.platform_admins WHERE email = :email"),
+            {"email": payload.username}
+        ).first()
+
+        if not user_row:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        
-        if not super_admin_user.is_active:
+        if not verify_password(payload.password, user_row.hashed_password):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        if not user_row.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
-        
-        # Create token with super admin privileges and tenant info
+
+        # Create platform token with super admin privileges; no tenant claim
         token = create_access_token(
-            subject=str(super_admin_user.id),
-            extra={"super_admin": True, "tenant": super_admin_tenant.slug}
+            subject=str(user_row.id),
+            extra={"super_admin": True}
         )
-        
         return Token(access_token=token)
-        
     finally:
         db.close()
 
@@ -125,67 +88,25 @@ def me(db: Session = Depends(get_tenant_db), user_id: int = Depends(get_current_
 
 @router.get("/super-admin/me")
 def super_admin_me(user_id: int = Depends(get_current_user_id)):
-    """Get super admin user information across all tenants."""
+    """Get platform super admin profile (public schema)."""
     from app.db.session import SessionLocal
-    from app.tenancy.service import TenantService
-    
+
     db = SessionLocal()
     try:
-        tenants = db.execute(text("SELECT id, name, slug FROM tenants ORDER BY id")).mappings().all()
-        
-        # Find the super admin user in any tenant
-        super_admin_user = None
-        super_admin_tenant = None
-        
-        for tenant in tenants:
-            db.execute(text(f'SET LOCAL search_path TO "{tenant.slug}", public'))
-            
-            user = db.execute(
-                text("SELECT id, email, full_name, is_active FROM users WHERE id = :id"),
-                {"id": user_id}
-            ).mappings().first()
-            
-            if user:
-                # Check if this user has Super Administrator role
-                roles = db.execute(
-                    text("""
-                        SELECT r.name FROM roles r
-                        JOIN user_roles ur ON ur.role_id = r.id
-                        WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
-                    """),
-                    {"user_id": user_id}
-                ).scalars().all()
-                
-                if roles:
-                    super_admin_user = user
-                    super_admin_tenant = tenant
-                    break
-        
-        if not super_admin_user:
+        user = db.execute(
+            text("SELECT id, email, full_name, is_active, created_at, updated_at FROM public.platform_admins WHERE id = :id"),
+            {"id": user_id}
+        ).mappings().first()
+        if not user:
             raise HTTPException(status_code=404, detail="Super Administrator not found")
-        
-        # Get all permissions for super admin
-        permissions = db.execute(
-            text("""
-                SELECT DISTINCT p.name
-                FROM permissions p
-                JOIN role_permissions rp ON rp.permission_id = p.id
-                JOIN user_roles ur ON ur.role_id = rp.role_id
-                WHERE ur.user_id = :uid
-            """),
-            {"uid": user_id}
-        ).scalars().all()
-        
-        data = dict(super_admin_user)
+
+        data = dict(user)
         data.update({
             "roles": ["Super Administrator"],
-            "permissions": list(permissions),
-            "tenant": super_admin_tenant.slug if super_admin_tenant else None,
+            "permissions": ["tenants.manage", "settings.manage"],
             "super_admin": True
         })
-        
         return data
-        
     finally:
         db.close()
 

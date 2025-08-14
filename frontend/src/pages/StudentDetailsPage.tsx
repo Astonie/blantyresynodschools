@@ -21,7 +21,22 @@ export default function StudentDetailsPage() {
       setStudent(st.data)
       setRecords(rec.data)
     } catch (e: any) {
-      toast({ title: 'Error', description: e?.response?.data?.detail || String(e), status: 'error' })
+      const errorDetail = e?.response?.data?.detail || String(e)
+      
+      // Check if it's an authentication error
+      if (errorDetail.includes('Session expired') || 
+          errorDetail.includes('Invalid token') || 
+          e?.response?.status === 401) {
+        // Let the auth context handle this
+        return
+      }
+      
+      // For other errors, show toast but don't logout
+      toast({ 
+        title: 'Error loading student details', 
+        description: errorDetail, 
+        status: 'error' 
+      })
     } finally {
       setLoading(false)
     }

@@ -41,6 +41,9 @@ export function AppShell() {
 		load()
 	}, [])
 
+  const [branding, setBranding] = useState<{ logo_url?: string; primary_color?: string; secondary_color?: string } | null>(null)
+  const [enabledModules, setEnabledModules] = useState<string[]>([])
+
   const onTenantChange = (v: string) => {
 		localStorage.setItem('tenant', v)
 		setTenant(v)
@@ -52,7 +55,27 @@ export function AppShell() {
     navigate('/login', { replace: true })
   }
 
-	return (
+  useEffect(() => {
+    const loadConfig = async () => {
+      if (!tenant) return
+      try {
+        const res = await api.get(`/tenants/public/config`, { params: { slug: tenant } })
+        setBranding(res.data.branding || null)
+        setEnabledModules(res.data.enabled_modules || [])
+      } catch {
+        setBranding(null)
+        setEnabledModules([])
+      }
+    }
+    loadConfig()
+  }, [tenant])
+
+  const show = (mod: string) => enabledModules.length === 0 || enabledModules.includes(mod)
+
+  const primary = branding?.primary_color || undefined
+  const headerStyle = primary ? { color: primary } as React.CSSProperties : undefined
+
+  return (
     <Flex minH="100vh" bg="gray.50">
 			{/* Sidebar */}
       <Box as="aside" display={{ base: 'none', md: 'block' }} w="260px" bg="white" borderRightWidth="1px" position="sticky" top={0} h="100vh">
@@ -65,23 +88,23 @@ export function AppShell() {
 							position="relative"
 						>
 							<Image
-								src="/logo.jpg"
+								src={branding?.logo_url || '/logo.jpg'}
 								alt="CCAP Blantyre Synod Logo"
 								w="full"
 								h="full"
 								objectFit="contain"
 							/>
 						</Box>
-						<Text fontWeight="bold" color="brand.600">Blantyre Synod</Text>
+						<Text fontWeight="bold" style={headerStyle}>Blantyre Synod</Text>
 					</HStack>
 				</Flex>
 				<VStack align="stretch" spacing={1} p={3}>
 					<NavItem to="/app" icon={<StarIcon />}>Dashboard</NavItem>
-					<NavItem to="/app/students" icon={<EditIcon />}>Students</NavItem>
-					<NavItem to="/app/academic" icon={<CalendarIcon />}>Academic</NavItem>
-					<NavItem to="/app/teachers" icon={<AtSignIcon />}>Teachers</NavItem>
-					<NavItem to="/app/finance" icon={<CalendarIcon />}>Finance</NavItem>
-					<NavItem to="/app/communications" icon={<ChatIcon />}>Communications</NavItem>
+					{show('students') && <NavItem to="/app/students" icon={<EditIcon />}>Students</NavItem>}
+					{show('academic') && <NavItem to="/app/academic" icon={<CalendarIcon />}>Academic</NavItem>}
+					{show('teachers') && <NavItem to="/app/teachers" icon={<AtSignIcon />}>Teachers</NavItem>}
+					{show('finance') && <NavItem to="/app/finance" icon={<CalendarIcon />}>Finance</NavItem>}
+					{show('communications') && <NavItem to="/app/communications" icon={<ChatIcon />}>Communications</NavItem>}
 					<Divider my={2} />
 					<NavItem to="/app/settings" icon={<SettingsIcon />}>Settings</NavItem>
 				</VStack>
