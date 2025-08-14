@@ -25,6 +25,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchMe = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await api.get('/auth/me')
+      setUser(res.data)
+    } catch (e: any) {
+      const errorDetail = e?.response?.data?.detail || 'Failed to load user'
+      if (
+        errorDetail.includes('Session expired') ||
+        errorDetail.includes('Invalid token') ||
+        e?.response?.status === 401
+      ) {
+        localStorage.removeItem('token')
+        setUser(null)
+        window.location.href = '/login'
+        return
+      }
+      setError(errorDetail)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('token')
     const tenant = localStorage.getItem('tenant')
@@ -42,28 +66,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(res.data)
       } catch (e: any) {
         if (!mounted) return
-        
-        // Check if it's a session expiry or authentication error
         const errorDetail = e?.response?.data?.detail || 'Failed to load user'
-        if (errorDetail.includes('Session expired') || 
-            errorDetail.includes('Invalid token') || 
-            e?.response?.status === 401) {
-          // Clear auth and redirect to login
+        if (
+          errorDetail.includes('Session expired') ||
+          errorDetail.includes('Invalid token') ||
+          e?.response?.status === 401
+        ) {
           localStorage.removeItem('token')
           setUser(null)
           window.location.href = '/login'
           return
         }
-        
-        // For other errors, just set the error but don't clear user
         setError(errorDetail)
       } finally {
         if (mounted) setIsLoading(false)
       }
     }
     load()
+    // React to token changes
+    const onAuthUpdated = () => fetchMe()
+    window.addEventListener('auth:updated', onAuthUpdated)
     return () => {
       mounted = false
+      window.removeEventListener('auth:updated', onAuthUpdated)
     }
   }, [])
 

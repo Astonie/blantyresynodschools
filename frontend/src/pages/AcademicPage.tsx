@@ -189,7 +189,7 @@ export default function AcademicPage() {
   const [recordQuery, setRecordQuery] = useState('')
   const [reportForm, setReportForm] = useState({ student_id: '', term: '', year: '' })
   const [report, setReport] = useState<any | null>(null)
-  
+
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.700')
 
@@ -453,6 +453,8 @@ export default function AcademicPage() {
               <Tab>Attendance</Tab>
               <Tab>Exam Schedule</Tab>
               <Tab>Reports</Tab>
+              <Tab>Grading Settings</Tab>
+              <Tab>Parent View</Tab>
             </TabList>
 
             <TabPanels>
@@ -513,25 +515,25 @@ export default function AcademicPage() {
               <TabPanel>
                 <VStack spacing={6} align="stretch">
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                    <Card>
+        <Card>
                       <CardHeader>
                         <Heading size="sm">Create Class</Heading>
                       </CardHeader>
-                      <CardBody>
-                        <VStack spacing={3} align="stretch">
-                          <HStack>
-                            <FormControl isRequired>
-                              <FormLabel>Name</FormLabel>
-                              <Input placeholder="e.g. Form 1" value={classForm.name} onChange={(e) => setClassForm({ ...classForm, name: e.target.value })} />
-                            </FormControl>
-                            <FormControl>
-                              <FormLabel>Grade Level</FormLabel>
-                              <Input placeholder="e.g. 9" value={classForm.grade_level} onChange={(e) => setClassForm({ ...classForm, grade_level: e.target.value })} />
-                            </FormControl>
-                          </HStack>
-                          <HStack>
-                            <FormControl>
-                              <FormLabel>Capacity</FormLabel>
+          <CardBody>
+            <VStack spacing={3} align="stretch">
+              <HStack>
+                <FormControl isRequired>
+                  <FormLabel>Name</FormLabel>
+                  <Input placeholder="e.g. Form 1" value={classForm.name} onChange={(e) => setClassForm({ ...classForm, name: e.target.value })} />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Grade Level</FormLabel>
+                  <Input placeholder="e.g. 9" value={classForm.grade_level} onChange={(e) => setClassForm({ ...classForm, grade_level: e.target.value })} />
+                </FormControl>
+              </HStack>
+              <HStack>
+                <FormControl>
+                  <FormLabel>Capacity</FormLabel>
                               <NumberInput value={classForm.capacity} onChange={(_, value) => setClassForm({ ...classForm, capacity: value })} min={1} max={100}>
                                 <NumberInputField />
                                 <NumberInputStepper>
@@ -539,35 +541,35 @@ export default function AcademicPage() {
                                   <NumberDecrementStepper />
                                 </NumberInputStepper>
                               </NumberInput>
-                            </FormControl>
-                            <FormControl>
-                              <FormLabel>Academic Year</FormLabel>
-                              <Input placeholder="e.g. 2025" value={classForm.academic_year} onChange={(e) => setClassForm({ ...classForm, academic_year: e.target.value })} />
-                            </FormControl>
-                          </HStack>
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Academic Year</FormLabel>
+                  <Input placeholder="e.g. 2025" value={classForm.academic_year} onChange={(e) => setClassForm({ ...classForm, academic_year: e.target.value })} />
+                </FormControl>
+              </HStack>
                           <Button colorScheme="blue" onClick={createClass}>Add Class</Button>
-                        </VStack>
-                      </CardBody>
-                    </Card>
-
-                    <Card>
+            </VStack>
+          </CardBody>
+        </Card>
+ 
+        <Card>
                       <CardHeader>
                         <Heading size="sm">Create Subject</Heading>
                       </CardHeader>
-                      <CardBody>
-                        <VStack spacing={3} align="stretch">
-                          <HStack>
-                            <FormControl isRequired>
-                              <FormLabel>Name</FormLabel>
-                              <Input value={subjectForm.name} onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })} />
-                            </FormControl>
-                            <FormControl isRequired>
-                              <FormLabel>Code</FormLabel>
-                              <Input value={subjectForm.code} onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })} />
-                            </FormControl>
-                          </HStack>
-                          <FormControl>
-                            <FormLabel>Description</FormLabel>
+          <CardBody>
+            <VStack spacing={3} align="stretch">
+              <HStack>
+                <FormControl isRequired>
+                  <FormLabel>Name</FormLabel>
+                  <Input value={subjectForm.name} onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })} />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Code</FormLabel>
+                  <Input value={subjectForm.code} onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })} />
+                </FormControl>
+              </HStack>
+              <FormControl>
+                <FormLabel>Description</FormLabel>
                             <Textarea value={subjectForm.description} onChange={(e) => setSubjectForm({ ...subjectForm, description: e.target.value })} />
                           </FormControl>
                           <FormControl>
@@ -579,51 +581,51 @@ export default function AcademicPage() {
                                 <NumberDecrementStepper />
                               </NumberInputStepper>
                             </NumberInput>
-                          </FormControl>
+              </FormControl>
                           <Button colorScheme="blue" onClick={createSubject}>Add Subject</Button>
-                        </VStack>
-                      </CardBody>
-                    </Card>
-                  </SimpleGrid>
+            </VStack>
+          </CardBody>
+        </Card>
+       </SimpleGrid>
 
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                    <Card>
+        <Card>
                       <CardHeader>
                         <Heading size="sm">Classes</Heading>
                       </CardHeader>
-                      <CardBody>
+          <CardBody>
                         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                          {classes.map((c) => (
-                            <Box key={c.id} borderWidth="1px" rounded="md" p={3}>
-                              <Text fontWeight="bold">{c.name}</Text>
-                              <Text color="gray.600">Year: {c.academic_year}</Text>
-                              <Text color="gray.600">Capacity: {c.capacity}</Text>
+              {classes.map((c) => (
+                <Box key={c.id} borderWidth="1px" rounded="md" p={3}>
+                  <Text fontWeight="bold">{c.name}</Text>
+                  <Text color="gray.600">Year: {c.academic_year}</Text>
+                  <Text color="gray.600">Capacity: {c.capacity}</Text>
                               {c.teacher_name && <Text color="gray.600">Teacher: {c.teacher_name}</Text>}
-                            </Box>
-                          ))}
-                        </SimpleGrid>
-                      </CardBody>
-                    </Card>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </CardBody>
+        </Card>
 
-                    <Card>
+        <Card>
                       <CardHeader>
                         <Heading size="sm">Subjects</Heading>
                       </CardHeader>
-                      <CardBody>
+          <CardBody>
                         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                          {subjects.map((s) => (
-                            <Box key={s.id} borderWidth="1px" rounded="md" p={3}>
-                              <Text fontWeight="bold">{s.name} ({s.code})</Text>
-                              <Text color="gray.600">{s.description || '-'}</Text>
+              {subjects.map((s) => (
+                <Box key={s.id} borderWidth="1px" rounded="md" p={3}>
+                  <Text fontWeight="bold">{s.name} ({s.code})</Text>
+                  <Text color="gray.600">{s.description || '-'}</Text>
                               <Text color="gray.600">Credits: {s.credits}</Text>
-                            </Box>
-                          ))}
-                        </SimpleGrid>
-                      </CardBody>
-                    </Card>
-                  </SimpleGrid>
-                </VStack>
-              </TabPanel>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </CardBody>
+        </Card>
+       </SimpleGrid>
+                 </VStack>
+               </TabPanel>
 
               {/* Academic Records Tab */}
               <TabPanel>
@@ -632,111 +634,111 @@ export default function AcademicPage() {
                     <CardHeader>
                       <Heading size="sm">Record Examination/CA Scores</Heading>
                     </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={3}>
-                        <HStack>
-                          <FormControl isRequired>
-                            <FormLabel>Student</FormLabel>
-                            <Select placeholder="Select" value={recordForm.student_id} onChange={(e) => setRecordForm({ ...recordForm, student_id: e.target.value })}>
-                              {students.map(st => (
+        <CardBody>
+          <VStack align="stretch" spacing={3}>
+            <HStack>
+              <FormControl isRequired>
+                <FormLabel>Student</FormLabel>
+                <Select placeholder="Select" value={recordForm.student_id} onChange={(e) => setRecordForm({ ...recordForm, student_id: e.target.value })}>
+                  {students.map(st => (
                                 <option key={st.id} value={st.id}>{st.first_name} {st.last_name} {st.admission_no ? `(${st.admission_no})` : ''}</option>
-                              ))}
-                            </Select>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Subject</FormLabel>
-                            <Select placeholder="Select" value={recordForm.subject_id} onChange={(e) => setRecordForm({ ...recordForm, subject_id: e.target.value })}>
-                              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </Select>
-                          </FormControl>
-                          <FormControl isRequired>
-                            <FormLabel>Class</FormLabel>
-                            <Select placeholder="Select" value={recordForm.class_id} onChange={(e) => setRecordForm({ ...recordForm, class_id: e.target.value })}>
-                              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </Select>
-                          </FormControl>
-                        </HStack>
-                        <HStack>
-                          <FormControl isRequired>
-                            <FormLabel>Term</FormLabel>
-                            <Input placeholder="e.g. Term 1" value={recordForm.term} onChange={(e) => setRecordForm({ ...recordForm, term: e.target.value })} />
-                          </FormControl>
-                          <FormControl>
-                            <FormLabel>Academic Year</FormLabel>
-                            <Input placeholder="e.g. 2025" value={recordForm.year} onChange={(e) => setRecordForm({ ...recordForm, year: e.target.value })} />
-                          </FormControl>
-                          <FormControl>
-                            <FormLabel>CA Score</FormLabel>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Subject</FormLabel>
+                <Select placeholder="Select" value={recordForm.subject_id} onChange={(e) => setRecordForm({ ...recordForm, subject_id: e.target.value })}>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </Select>
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Class</FormLabel>
+                <Select placeholder="Select" value={recordForm.class_id} onChange={(e) => setRecordForm({ ...recordForm, class_id: e.target.value })}>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Select>
+              </FormControl>
+            </HStack>
+            <HStack>
+              <FormControl isRequired>
+                <FormLabel>Term</FormLabel>
+                <Input placeholder="e.g. Term 1" value={recordForm.term} onChange={(e) => setRecordForm({ ...recordForm, term: e.target.value })} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Academic Year</FormLabel>
+                <Input placeholder="e.g. 2025" value={recordForm.year} onChange={(e) => setRecordForm({ ...recordForm, year: e.target.value })} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>CA Score</FormLabel>
                             <NumberInput value={recordForm.ca_score} onChange={(_, value) => setRecordForm({ ...recordForm, ca_score: value.toString() })} min={0} max={100}>
                               <NumberInputField />
                             </NumberInput>
-                          </FormControl>
-                          <FormControl>
-                            <FormLabel>Exam Score</FormLabel>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Exam Score</FormLabel>
                             <NumberInput value={recordForm.exam_score} onChange={(_, value) => setRecordForm({ ...recordForm, exam_score: value.toString() })} min={0} max={100}>
                               <NumberInputField />
                             </NumberInput>
-                          </FormControl>
-                        </HStack>
+              </FormControl>
+            </HStack>
                         <FormControl>
                           <FormLabel>Remarks</FormLabel>
                           <Textarea value={recordForm.remarks} onChange={(e) => setRecordForm({ ...recordForm, remarks: e.target.value })} placeholder="Additional comments..." />
                         </FormControl>
                         <HStack justify="space-between">
                           <Button colorScheme="blue" onClick={recordResult}>Save Result</Button>
-                          <Button variant="outline" onClick={loadRecords}>Load Existing Records</Button>
+              <Button variant="outline" onClick={loadRecords}>Load Existing Records</Button>
                         </HStack>
                         
                         {records.length > 0 && (
                           <Box>
                             <InputGroup maxW="320px" mb={3}>
-                              <InputLeftElement>
-                                <Icon as={SearchIcon} color="gray.400" />
-                              </InputLeftElement>
-                              <Input placeholder="Filter by subject or term" value={recordQuery} onChange={(e) => setRecordQuery(e.target.value)} />
-                            </InputGroup>
+                <InputLeftElement>
+                  <Icon as={SearchIcon} color="gray.400" />
+                </InputLeftElement>
+                <Input placeholder="Filter by subject or term" value={recordQuery} onChange={(e) => setRecordQuery(e.target.value)} />
+              </InputGroup>
                             <Box borderWidth="1px" rounded="md" p={3} maxH="400px" overflowY="auto">
-                              <Table size="sm" variant="simple">
-                                <Thead>
-                                  <Tr>
-                                    <Th>Student</Th>
-                                    <Th>Subject</Th>
-                                    <Th>Class</Th>
-                                    <Th>Term</Th>
-                                    <Th>CA</Th>
-                                    <Th>Exam</Th>
-                                    <Th>Overall</Th>
-                                    <Th>Grade</Th>
-                                  </Tr>
-                                </Thead>
-                                <Tbody>
-                                  {records.filter((r) => {
-                                    const q = recordQuery.trim().toLowerCase()
-                                    if (!q) return true
-                                    return (
-                                      (r.subject_name || '').toLowerCase().includes(q) ||
-                                      (r.term || '').toLowerCase().includes(q)
-                                    )
-                                  }).map((r, idx) => (
-                                    <Tr key={idx}>
-                                      <Td>{r.student_name}</Td>
-                                      <Td>{r.subject_name}</Td>
-                                      <Td>{r.class_name}</Td>
-                                      <Td>{r.term} {r.academic_year}</Td>
-                                      <Td>{r.ca_score ?? '-'}</Td>
-                                      <Td>{r.exam_score ?? '-'}</Td>
-                                      <Td>{r.overall_score ?? '-'}</Td>
-                                      <Td>{r.grade ?? '-'}</Td>
-                                    </Tr>
-                                  ))}
-                                </Tbody>
-                              </Table>
+                <Table size="sm" variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Student</Th>
+                      <Th>Subject</Th>
+                      <Th>Class</Th>
+                      <Th>Term</Th>
+                      <Th>CA</Th>
+                      <Th>Exam</Th>
+                      <Th>Overall</Th>
+                      <Th>Grade</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {records.filter((r) => {
+                      const q = recordQuery.trim().toLowerCase()
+                      if (!q) return true
+                      return (
+                        (r.subject_name || '').toLowerCase().includes(q) ||
+                        (r.term || '').toLowerCase().includes(q)
+                      )
+                    }).map((r, idx) => (
+                      <Tr key={idx}>
+                        <Td>{r.student_name}</Td>
+                        <Td>{r.subject_name}</Td>
+                        <Td>{r.class_name}</Td>
+                        <Td>{r.term} {r.academic_year}</Td>
+                        <Td>{r.ca_score ?? '-'}</Td>
+                        <Td>{r.exam_score ?? '-'}</Td>
+                        <Td>{r.overall_score ?? '-'}</Td>
+                        <Td>{r.grade ?? '-'}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
                             </Box>
-                          </Box>
-                        )}
-                      </VStack>
-                    </CardBody>
-                  </Card>
+              </Box>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
                 </VStack>
               </TabPanel>
 
@@ -910,33 +912,33 @@ export default function AcademicPage() {
               {/* Reports Tab */}
               <TabPanel>
                 <VStack spacing={6} align="stretch">
-                  <Card>
+      <Card>
                     <CardHeader>
                       <Heading size="sm">Student Report Card</Heading>
                     </CardHeader>
-                    <CardBody>
+        <CardBody>
                       <HStack spacing={4} mb={4}>
-                        <FormControl isRequired>
-                          <FormLabel>Student</FormLabel>
-                          <Select placeholder="Select" value={reportForm.student_id} onChange={(e) => setReportForm({ ...reportForm, student_id: e.target.value })}>
-                            {students.map(st => (
+            <FormControl isRequired>
+              <FormLabel>Student</FormLabel>
+              <Select placeholder="Select" value={reportForm.student_id} onChange={(e) => setReportForm({ ...reportForm, student_id: e.target.value })}>
+                {students.map(st => (
                               <option key={st.id} value={st.id}>{st.first_name} {st.last_name} {st.admission_no ? `(${st.admission_no})` : ''}</option>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <FormControl isRequired>
-                          <FormLabel>Term</FormLabel>
-                          <Input placeholder="e.g. Term 1" value={reportForm.term} onChange={(e) => setReportForm({ ...reportForm, term: e.target.value })} />
-                        </FormControl>
-                        <FormControl>
-                          <FormLabel>Academic Year</FormLabel>
-                          <Input placeholder="e.g. 2025" value={reportForm.year} onChange={(e) => setReportForm({ ...reportForm, year: e.target.value })} />
-                        </FormControl>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Term</FormLabel>
+              <Input placeholder="e.g. Term 1" value={reportForm.term} onChange={(e) => setReportForm({ ...reportForm, term: e.target.value })} />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Academic Year</FormLabel>
+              <Input placeholder="e.g. 2025" value={reportForm.year} onChange={(e) => setReportForm({ ...reportForm, year: e.target.value })} />
+            </FormControl>
                         <Button colorScheme="blue" onClick={generateReport}>Generate Report</Button>
-                      </HStack>
+          </HStack>
                       
-                      {report && (
-                        <Box borderWidth="1px" rounded="md" p={4} bg="gray.50">
+          {report && (
+            <Box borderWidth="1px" rounded="md" p={4} bg="gray.50">
                           <HStack justify="space-between" mb={4}>
                             <VStack align="start" spacing={1}>
                               <Heading size="md">{report.student.name} - {report.student.class}</Heading>
@@ -946,11 +948,11 @@ export default function AcademicPage() {
                           </HStack>
                           
                           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} mb={4}>
-                            {report.subjects.map((r: any, idx: number) => (
+                {report.subjects.map((r: any, idx: number) => (
                               <Card key={idx} variant="outline">
                                 <CardBody>
                                   <VStack align="start" spacing={2}>
-                                    <Text fontWeight="bold">{r.subject_name} ({r.subject_code})</Text>
+                    <Text fontWeight="bold">{r.subject_name} ({r.subject_code})</Text>
                                     <HStack justify="space-between" w="100%">
                                       <Text>CA:</Text>
                                       <Text fontWeight="medium">{r.ca_score ?? '-'}</Text>
@@ -972,26 +974,54 @@ export default function AcademicPage() {
                                   </VStack>
                                 </CardBody>
                               </Card>
-                            ))}
-                          </SimpleGrid>
+                ))}
+              </SimpleGrid>
                           
                           <Box textAlign="center" p={4} bg="white" rounded="md">
                             <Text fontSize="lg" fontWeight="bold">
                               Overall Average: {report.overall_average ?? 'N/A'}
                             </Text>
                           </Box>
-                        </Box>
-                      )}
+            </Box>
+          )}
+        </CardBody>
+      </Card>
+                </VStack>
+              </TabPanel>
+
+              {/* Grading Settings Tab */}
+              <TabPanel>
+                <VStack spacing={6} align="stretch">
+                  <Card>
+                    <CardHeader>
+                      <Heading size="sm">Grading Policy</Heading>
+                    </CardHeader>
+                    <CardBody>
+                      <GradingPolicyEditor />
+                    </CardBody>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <Heading size="sm">Grade Scales</Heading>
+                    </CardHeader>
+                    <CardBody>
+                      <GradeScalesEditor />
                     </CardBody>
                   </Card>
                 </VStack>
               </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </VStack>
-      </Container>
 
-      {/* Bulk Attendance Modal */}
+              {/* Parent View Tab */}
+              <TabPanel>
+                <ParentResultsView />
+              </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </VStack>
+        </Container>
+
+        {/* Bulk Attendance Modal */}
       <Modal isOpen={isAttendanceOpen} onClose={onAttendanceClose} size="4xl">
         <ModalOverlay />
         <ModalContent>
@@ -1062,6 +1092,240 @@ export default function AcademicPage() {
         </ModalContent>
       </Modal>
     </Box>
+  )
+}
+
+// Inline components for grading and parent views
+function GradingPolicyEditor() {
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
+  const [policy, setPolicy] = useState<{ policy_type: 'percentage' | 'gpa'; ca_weight: number; exam_weight: number; pass_mark: number } | null>(null)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get('/academic/grading/policy')
+        setPolicy(res.data)
+      } catch {
+        setPolicy(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const save = async () => {
+    if (!policy) return
+    try {
+      await api.put('/academic/grading/policy', null, { params: policy })
+      toast({ title: 'Saved', status: 'success' })
+    } catch (e: any) {
+      toast({ title: 'Failed', description: e?.response?.data?.detail || 'Error', status: 'error' })
+    }
+  }
+
+  if (loading) return <HStack><Spinner /><Text>Loading policy...</Text></HStack>
+  if (!policy) return <Text>Policy not found</Text>
+
+  return (
+    <VStack align="stretch" spacing={4}>
+      <HStack>
+        <FormControl>
+          <FormLabel>Policy Type</FormLabel>
+          <Select value={policy.policy_type} onChange={(e) => setPolicy({ ...policy, policy_type: e.target.value as any })}>
+            <option value="percentage">Percentage</option>
+            <option value="gpa">GPA</option>
+          </Select>
+        </FormControl>
+        <FormControl>
+          <FormLabel>CA Weight (%)</FormLabel>
+          <NumberInput value={policy.ca_weight} min={0} max={100} onChange={(_, v) => setPolicy({ ...policy, ca_weight: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Exam Weight (%)</FormLabel>
+          <NumberInput value={policy.exam_weight} min={0} max={100} onChange={(_, v) => setPolicy({ ...policy, exam_weight: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Pass Mark (%)</FormLabel>
+          <NumberInput value={policy.pass_mark} min={0} max={100} onChange={(_, v) => setPolicy({ ...policy, pass_mark: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+      </HStack>
+      <Button colorScheme="blue" onClick={save}>Save Policy</Button>
+    </VStack>
+  )
+}
+
+function GradeScalesEditor() {
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
+  const [scales, setScales] = useState<Array<any>>([])
+  const [form, setForm] = useState({ letter: 'A', min_score: 80, max_score: 100, points: 4.0, remarks: 'Excellent', sort_order: 1 })
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/academic/grading/scales')
+      setScales(res.data)
+    } catch {
+      setScales([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const add = async () => {
+    try {
+      await api.post('/academic/grading/scales', null, { params: form })
+      toast({ title: 'Scale added', status: 'success' })
+      setForm({ letter: 'A', min_score: 80, max_score: 100, points: 4.0, remarks: 'Excellent', sort_order: 1 })
+      load()
+    } catch (e: any) {
+      toast({ title: 'Failed', description: e?.response?.data?.detail || 'Error', status: 'error' })
+    }
+  }
+
+  const remove = async (id: number) => {
+    if (!confirm('Delete grade scale?')) return
+    try {
+      await api.delete(`/academic/grading/scales/${id}`)
+      toast({ title: 'Deleted', status: 'success' })
+      load()
+    } catch (e: any) {
+      toast({ title: 'Failed', description: e?.response?.data?.detail || 'Error', status: 'error' })
+    }
+  }
+
+  return (
+    <VStack align="stretch" spacing={4}>
+      <HStack>
+        <FormControl>
+          <FormLabel>Letter</FormLabel>
+          <Input value={form.letter} onChange={(e) => setForm({ ...form, letter: e.target.value })} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Min</FormLabel>
+          <NumberInput value={form.min_score} min={0} max={100} onChange={(_, v) => setForm({ ...form, min_score: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Max</FormLabel>
+          <NumberInput value={form.max_score} min={0} max={100} onChange={(_, v) => setForm({ ...form, max_score: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Points</FormLabel>
+          <NumberInput value={form.points} min={0} max={5} precision={2} step={0.25} onChange={(_, v) => setForm({ ...form, points: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Remarks</FormLabel>
+          <Input value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Order</FormLabel>
+          <NumberInput value={form.sort_order} min={0} max={20} onChange={(_, v) => setForm({ ...form, sort_order: v || 0 })}>
+            <NumberInputField />
+          </NumberInput>
+        </FormControl>
+      </HStack>
+      <Button onClick={add} colorScheme="blue">Add Scale</Button>
+
+      {loading ? (
+        <HStack><Spinner /><Text>Loading scales...</Text></HStack>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+          {scales.map((s: any) => (
+            <HStack key={s.id} borderWidth="1px" rounded="md" p={3} justify="space-between">
+              <Text fontWeight="bold">{s.letter}</Text>
+              <Text>{s.min_score} - {s.max_score}</Text>
+              <Text>Pts: {s.points ?? '-'}</Text>
+              <Text>{s.remarks || '-'}</Text>
+              <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" onClick={() => remove(s.id)} />
+            </HStack>
+          ))}
+        </SimpleGrid>
+      )}
+    </VStack>
+  )
+}
+
+function ParentResultsView() {
+  const toast = useToast()
+  const [students, setStudents] = useState<Array<any>>([])
+  const [results, setResults] = useState<Array<any>>([])
+  const [filters, setFilters] = useState({ student_id: '', term: '', academic_year: '' })
+  const [loading, setLoading] = useState(true)
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      const st = await api.get('/academic/parent/students')
+      setStudents(st.data)
+      const res = await api.get('/academic/parent/results', { params: {
+        student_id: filters.student_id || undefined,
+        term: filters.term || undefined,
+        academic_year: filters.academic_year || undefined
+      }})
+      setResults(res.data)
+    } catch (e: any) {
+      setResults([])
+      if (e?.response?.status !== 403) {
+        toast({ title: 'Failed', description: 'Could not load results', status: 'error' })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  return (
+    <VStack align="stretch" spacing={4}>
+      <HStack>
+        <Select placeholder="Select child" value={filters.student_id} onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}>
+          {students.map((s) => (
+            <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.class_name})</option>
+          ))}
+        </Select>
+        <Input placeholder="Term (e.g. Term 1)" value={filters.term} onChange={(e) => setFilters({ ...filters, term: e.target.value })} />
+        <Input placeholder="Year (e.g. 2025)" value={filters.academic_year} onChange={(e) => setFilters({ ...filters, academic_year: e.target.value })} />
+        <Button onClick={load}>Filter</Button>
+      </HStack>
+
+      {loading ? (
+        <HStack><Spinner /><Text>Loading...</Text></HStack>
+      ) : results.length === 0 ? (
+        <Text>No results available</Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={3}>
+          {results.map((r, idx) => (
+            <Card key={idx}>
+              <CardBody>
+                <VStack align="start" spacing={1}>
+                  <Text fontWeight="bold">{r.subject_name}</Text>
+                  <Text>CA: {r.ca_score ?? '-'}</Text>
+                  <Text>Exam: {r.exam_score ?? '-'}</Text>
+                  <Text>Overall: {r.overall_score ?? '-'}</Text>
+                  <Text>Grade: {r.grade ?? '-'}</Text>
+                </VStack>
+              </CardBody>
+            </Card>
+          ))}
+        </SimpleGrid>
+      )}
+    </VStack>
   )
 }
 

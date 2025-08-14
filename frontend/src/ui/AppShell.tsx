@@ -19,7 +19,7 @@ import {
 	Divider,
 	Image
 } from '@chakra-ui/react'
-import { HamburgerIcon, CalendarIcon, AtSignIcon, SettingsIcon, EditIcon, ChatIcon, StarIcon } from '@chakra-ui/icons'
+import { HamburgerIcon, CalendarIcon, AtSignIcon, SettingsIcon, EditIcon, ChatIcon, StarIcon, InfoIcon } from '@chakra-ui/icons'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
@@ -105,6 +105,7 @@ export function AppShell() {
 					{show('teachers') && <NavItem to="/app/teachers" icon={<AtSignIcon />}>Teachers</NavItem>}
 					{show('finance') && <NavItem to="/app/finance" icon={<CalendarIcon />}>Finance</NavItem>}
 					{show('communications') && <NavItem to="/app/communications" icon={<ChatIcon />}>Communications</NavItem>}
+					            {show('library') && <NavItem to="/app/library" icon={<InfoIcon />}>Library</NavItem>}
 					<Divider my={2} />
 					<NavItem to="/app/settings" icon={<SettingsIcon />}>Settings</NavItem>
 				</VStack>
@@ -145,6 +146,7 @@ export function AppShell() {
 							<NavItem to="/app/teachers" onNavigate={onClose} icon={<AtSignIcon />}>Teachers</NavItem>
 							<NavItem to="/app/finance" onNavigate={onClose} icon={<CalendarIcon />}>Finance</NavItem>
 							<NavItem to="/app/communications" onNavigate={onClose} icon={<ChatIcon />}>Communications</NavItem>
+							            <NavItem to="/app/library" onNavigate={onClose} icon={<InfoIcon />}>Library</NavItem>
 							<Divider />
 							<NavItem to="/app/settings" onNavigate={onClose} icon={<SettingsIcon />}>Settings</NavItem>
 							<Button onClick={() => { onClose(); logout(); }} variant="ghost" justifyContent="flex-start">Logout</Button>

@@ -133,6 +133,35 @@ TENANT_BASE_SCHEMA_SQL = """
         UNIQUE(student_id, class_id, subject_id, academic_year, term)
     );
 
+    -- Grading configuration tables
+    CREATE TABLE IF NOT EXISTS grading_policies (
+        id SERIAL PRIMARY KEY,
+        policy_type VARCHAR(20) NOT NULL DEFAULT 'percentage', -- percentage | gpa
+        ca_weight DECIMAL(5,2) DEFAULT 40.0, -- percent
+        exam_weight DECIMAL(5,2) DEFAULT 60.0, -- percent
+        pass_mark DECIMAL(5,2) DEFAULT 50.0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS grade_scales (
+        id SERIAL PRIMARY KEY,
+        letter VARCHAR(5) NOT NULL,
+        min_score DECIMAL(5,2) NOT NULL,
+        max_score DECIMAL(5,2) NOT NULL,
+        points DECIMAL(4,2), -- null when using percentage-only
+        remarks VARCHAR(255),
+        sort_order INTEGER DEFAULT 0
+    );
+
+    -- Parent mapping
+    CREATE TABLE IF NOT EXISTS parent_students (
+        id SERIAL PRIMARY KEY,
+        parent_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+        UNIQUE(parent_user_id, student_id)
+    );
+
     CREATE TABLE IF NOT EXISTS invoices (
         id SERIAL PRIMARY KEY,
         student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
@@ -187,12 +216,28 @@ TENANT_BASE_SCHEMA_SQL = """
             download_count INTEGER DEFAULT 0,
             tags TEXT[]
         );
+
+        CREATE TABLE IF NOT EXISTS announcements (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            audience_type VARCHAR(20) NOT NULL DEFAULT 'all', -- all | role | class
+            audience_value VARCHAR(100),
+            is_published BOOLEAN DEFAULT FALSE,
+            scheduled_at TIMESTAMP NULL,
+            published_at TIMESTAMP NULL,
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
 """
 
 ALTER_TABLES_IF_NEEDED_SQL = """
 ALTER TABLE IF EXISTS academic_records ADD COLUMN IF NOT EXISTS ca_score numeric(5,2);
 ALTER TABLE IF EXISTS academic_records ADD COLUMN IF NOT EXISTS exam_score numeric(5,2);
 ALTER TABLE IF EXISTS academic_records ADD COLUMN IF NOT EXISTS overall_score numeric(5,2);
+ALTER TABLE IF EXISTS academic_records ADD COLUMN IF NOT EXISTS grade_points numeric(4,2);
+ALTER TABLE IF EXISTS academic_records ADD COLUMN IF NOT EXISTS is_finalized boolean DEFAULT false;
 ALTER TABLE IF EXISTS students ADD COLUMN IF NOT EXISTS student_number varchar(64);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_students_student_number ON students(student_number) WHERE student_number IS NOT NULL;
 """
@@ -250,12 +295,19 @@ class TenantService:
             ("academic.create", "Create academic records"),
             ("academic.update", "Update academic records"),
             ("academic.delete", "Delete academic records"),
-                    ("academic.manage", "Manage academic settings and schedules"),
-        ("academic.attendance", "Manage student attendance"),
-        ("academic.record", "Record academic results"),
-        ("library.read", "Access library resources"),
-        ("library.manage", "Manage library resources"),
-        ("library.upload", "Upload library materials"),
+            ("academic.manage", "Manage academic settings and schedules"),
+            ("academic.attendance", "Manage student attendance"),
+            ("academic.record", "Record academic results"),
+            
+            # Library permissions
+            ("library.read", "Access library resources"),
+            ("library.manage", "Manage library resources"),
+            ("library.upload", "Upload library materials"),
+            
+            # Communications permissions
+            ("communications.read", "View announcements and communications"),
+            ("communications.manage", "Manage communications and announcements"),
+            ("communications.send", "Send or publish communications"),
             
             # Teacher management permissions
             ("teachers.read", "View teacher information"),
@@ -294,6 +346,7 @@ class TenantService:
         roles_data = [
             ("Super Administrator", "Full system access with all permissions"),
             ("School Administrator", "School-level administration with most permissions"),
+            ("Administrator", "Legacy admin role with broad permissions"),
             ("Teacher", "Teacher access with student and academic permissions"),
             ("Finance Officer", "Finance management with limited other access"),
             ("Student", "Student access with limited read permissions"),
@@ -311,7 +364,7 @@ class TenantService:
                     {"name": role_name, "description": role_desc}
                 )
         
-        # Assign permissions to roles
+        # Assign permissions to roles (baseline)
         role_permissions = {
             "Super Administrator": [
                 "students.read", "students.create", "students.update", "students.delete",
@@ -321,7 +374,8 @@ class TenantService:
                 "teachers.read", "teachers.create", "teachers.update", "teachers.delete",
                 "settings.manage", "dashboard.view", "attendance.read", "attendance.create",
                 "attendance.update", "reports.view", "reports.generate",
-                "library.read", "library.manage", "library.upload"
+                "library.read", "library.manage", "library.upload",
+                "communications.read", "communications.manage", "communications.send"
             ],
             "School Administrator": [
                 "students.read", "students.create", "students.update", "students.delete",
@@ -330,26 +384,40 @@ class TenantService:
                 "teachers.read", "teachers.create", "teachers.update",
                 "dashboard.view", "attendance.read", "attendance.create",
                 "attendance.update", "reports.view", "reports.generate",
-                "library.read", "library.manage", "library.upload"
+                "library.read", "library.manage", "library.upload", "settings.manage",
+                "communications.read", "communications.manage", "communications.send"
+            ],
+            "Administrator": [
+                "settings.manage", "dashboard.view",
+                "students.read", "students.create", "students.update", "students.delete",
+                "teachers.read", "teachers.create", "teachers.update",
+                "academic.read", "academic.create", "academic.update",
+                "finance.read", "finance.create", "finance.update",
+                "library.read", "library.manage", "library.upload",
+                "communications.read", "communications.manage", "communications.send"
             ],
             "Teacher": [
                 "students.read", "students.update",
                 "academic.read", "academic.create", "academic.update",
                 "dashboard.view", "attendance.read", "attendance.create",
                 "attendance.update", "reports.view",
-                "library.read"
+                "library.read",
+                "communications.read"
             ],
             "Finance Officer": [
                 "students.read",
                 "finance.read", "finance.create", "finance.update", "finance.delete",
-                "dashboard.view", "reports.view", "reports.generate"
+                "dashboard.view", "reports.view", "reports.generate",
+                "communications.read"
             ],
             "Student": [
                 "students.read", "academic.read", "dashboard.view",
-                "library.read"
+                "library.read",
+                "communications.read"
             ],
             "Parent": [
-                "students.read", "academic.read", "dashboard.view"
+                "students.read", "academic.read", "dashboard.view",
+                "communications.read"
             ]
         }
         
@@ -378,6 +446,39 @@ class TenantService:
                                 text("INSERT INTO role_permissions(role_id, permission_id) VALUES (:role_id, :perm_id)"),
                                 {"role_id": role_id, "perm_id": perm_id}
                             )
+        
+        # Ensure any role that has settings.manage also gets all library permissions (for legacy roles)
+        lib_perm_ids = self.db.execute(
+            text("SELECT id, name FROM permissions WHERE name IN ('library.read','library.manage','library.upload')")
+        ).mappings().all()
+        settings_manage_id = self.db.execute(
+            text("SELECT id FROM permissions WHERE name = 'settings.manage'")
+        ).scalar()
+        if settings_manage_id and lib_perm_ids:
+            admin_like_role_ids = self.db.execute(
+                text(
+                    """
+                    SELECT DISTINCT r.id
+                    FROM roles r
+                    JOIN role_permissions rp ON rp.role_id = r.id
+                    WHERE rp.permission_id = :pm
+                    UNION
+                    SELECT id FROM roles WHERE name IN ('Administrator','School Administrator','Super Administrator')
+                    """
+                ),
+                {"pm": settings_manage_id}
+            ).scalars().all()
+            for rid in admin_like_role_ids:
+                for lp in lib_perm_ids:
+                    existing = self.db.execute(
+                        text("SELECT 1 FROM role_permissions WHERE role_id = :rid AND permission_id = :pid"),
+                        {"rid": rid, "pid": lp.id}
+                    ).scalar()
+                    if not existing:
+                        self.db.execute(
+                            text("INSERT INTO role_permissions(role_id, permission_id) VALUES (:rid, :pid)"),
+                            {"rid": rid, "pid": lp.id}
+                        )
         
         # Create test users if they don't exist
         test_users = [
@@ -431,11 +532,13 @@ class TenantService:
                 # Create user
                 hashed_password = hash_password(user_data["password"])
                 result = self.db.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO users(email, full_name, hashed_password, is_active)
                         VALUES (:email, :full_name, :password, :is_active)
                         RETURNING id
-                    """),
+                        """
+                    ),
                     {
                         "email": user_data["email"],
                         "full_name": user_data["full_name"],
@@ -458,6 +561,33 @@ class TenantService:
                             {"user_id": user_id, "role_id": role_id}
                         )
         
+        # Ensure default grading policy exists BEFORE committing so current tenant search_path applies
+        existing_policy = self.db.execute(text("SELECT id FROM grading_policies LIMIT 1")).scalar()
+        if not existing_policy:
+            self.db.execute(text("""
+                INSERT INTO grading_policies(policy_type, ca_weight, exam_weight, pass_mark)
+                VALUES ('percentage', 40.0, 60.0, 50.0)
+            """))
+
+        # Ensure default grade scales exist (A-F)
+        existing_scales = self.db.execute(text("SELECT COUNT(*) FROM grade_scales")).scalar() or 0
+        if existing_scales == 0:
+            # Percentage-based default; points provided for GPA compatibility
+            scales = [
+                ('A', 80.0, 100.0, 4.00, 'Excellent', 1),
+                ('B', 70.0, 79.99, 3.00, 'Very Good', 2),
+                ('C', 60.0, 69.99, 2.00, 'Good', 3),
+                ('D', 50.0, 59.99, 1.00, 'Pass', 4),
+                ('E', 40.0, 49.99, 0.00, 'Weak', 5),
+                ('F', 0.0, 39.99, 0.00, 'Fail', 6)
+            ]
+            for letter, min_s, max_s, pts, note, ord in scales:
+                self.db.execute(text("""
+                    INSERT INTO grade_scales(letter, min_score, max_score, points, remarks, sort_order)
+                    VALUES (:l, :min, :max, :p, :r, :o)
+                """), {"l": letter, "min": min_s, "max": max_s, "p": pts, "r": note, "o": ord})
+
+        # Final commit for all seeded data
         self.db.commit()
 
 

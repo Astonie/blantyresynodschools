@@ -24,7 +24,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use((response) => {
   const refreshed = response.headers['x-refreshed-token'] as string | undefined
   if (refreshed) {
-    localStorage.setItem('token', refreshed)
+    const prev = localStorage.getItem('token')
+    if (prev !== refreshed) {
+      localStorage.setItem('token', refreshed)
+      // Notify auth provider that token changed
+      try { window.dispatchEvent(new Event('auth:updated')) } catch {}
+    }
   }
   return response
 }, (error) => {

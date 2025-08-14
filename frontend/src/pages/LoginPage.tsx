@@ -56,6 +56,9 @@ export default function LoginPage() {
       
       if (res.data.access_token) {
         localStorage.setItem('token', res.data.access_token)
+        // Notify auth provider immediately to fetch /auth/me
+        try { window.dispatchEvent(new Event('auth:updated')) } catch {}
+
         toast({ 
           title: 'Login Successful', 
           description: 'Welcome to Blantyre Synod Schools', 

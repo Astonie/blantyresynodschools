@@ -171,3 +171,42 @@ class StudentAcademicSummary(BaseModel):
     subjects: List[AcademicRecordRead]
     average_score: Optional[float]
     total_subjects: int
+
+
+# Exam Schedule schemas
+class ExamScheduleCreate(BaseModel):
+    title: str
+    subject_id: int
+    class_id: int
+    exam_date: date
+    start_time: str
+    duration: int  # in minutes
+    total_marks: int
+
+
+class ExamScheduleUpdate(BaseModel):
+    title: Optional[str] = None
+    subject_id: Optional[int] = None
+    class_id: Optional[int] = None
+    exam_date: Optional[date] = None
+    start_time: Optional[str] = None
+    duration: Optional[int] = None
+    total_marks: Optional[int] = None
+
+
+class ExamScheduleRead(BaseModel):
+    id: int
+    title: str
+    subject_id: int
+    class_id: int
+    exam_date: date
+    start_time: str
+    duration: int
+    total_marks: int
+    created_at: datetime
+    updated_at: datetime
+    subject_name: str
+    class_name: str
+
+    class Config:
+        from_attributes = True

@@ -10,6 +10,8 @@ from app.api.routers.hq import router as hq_router
 from app.api.routers.academic import router as academic_router
 from app.api.routers.teachers import router as teachers_router
 from app.api.routers.settings import router as settings_router
+from app.api.routers.library import router as library_router
+from app.api.routers.communications import router as communications_router
 from app.db.init_db import init_public
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -48,6 +50,8 @@ app.include_router(finance_router, prefix="/api/finance", tags=["finance"])
 app.include_router(academic_router, prefix="/api/academic", tags=["academic"])
 app.include_router(teachers_router, prefix="/api/teachers", tags=["teachers"])
 app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
+app.include_router(library_router, prefix="/api/library", tags=["library"])
+app.include_router(communications_router, prefix="/api/communications", tags=["communications"])
 
 
 @app.on_event("startup")

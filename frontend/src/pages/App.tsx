@@ -13,6 +13,7 @@ import AcademicPage from './AcademicPage'
 import TeachersPage from './TeachersPage'
 import CommunicationsPage from './CommunicationsPage'
 import SettingsPage from './SettingsPage'
+import LibraryPage from './LibraryPage'
 import StudentDetailsPage from './StudentDetailsPage'
 import { AppShell } from '../ui/AppShell'
 import { AuthProvider, useAuth } from '../lib/auth'
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="academic" element={<RequirePermission perms={["academic.read"]}><AcademicPage /></RequirePermission>} />
           <Route path="teachers" element={<RequirePermission perms={["teachers.read"]}><TeachersPage /></RequirePermission>} />
           <Route path="communications" element={<CommunicationsPage />} />
+          <Route path="library" element={<RequirePermission perms={["library.read"]}><LibraryPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission perms={["settings.manage"]}><SettingsPage /></RequirePermission>} />
         </Route>
         
