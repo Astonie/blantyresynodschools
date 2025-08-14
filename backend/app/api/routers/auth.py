@@ -29,7 +29,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_tenant_db)):
 def super_admin_login(payload: LoginRequest):
     """Super admin login that works across all tenants."""
     from app.db.session import SessionLocal
-    from app.tenancy.service import TenantService
     
     # Get all tenants
     db = SessionLocal()
@@ -41,30 +40,35 @@ def super_admin_login(payload: LoginRequest):
         super_admin_tenant = None
         
         for tenant in tenants:
-            # Set search path to this tenant
-            db.execute(text(f'SET LOCAL search_path TO "{tenant.slug}", public'))
-            
-            # Check if super admin exists in this tenant
-            user_row = db.execute(
-                text("SELECT id, email, hashed_password, is_active FROM users WHERE email = :email"),
-                {"email": payload.username}
-            ).first()
-            
-            if user_row:
-                # Check if this user has Super Administrator role
-                roles = db.execute(
-                    text("""
-                        SELECT r.name FROM roles r
-                        JOIN user_roles ur ON ur.role_id = r.id
-                        WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
-                    """),
-                    {"user_id": user_row.id}
-                ).scalars().all()
+            try:
+                # Set search path to this tenant
+                db.execute(text(f'SET LOCAL search_path TO "{tenant.slug}", public'))
                 
-                if roles:
-                    super_admin_user = user_row
-                    super_admin_tenant = tenant
-                    break
+                # Check if super admin exists in this tenant
+                user_row = db.execute(
+                    text("SELECT id, email, hashed_password, is_active FROM users WHERE email = :email"),
+                    {"email": payload.username}
+                ).first()
+                
+                if user_row:
+                    # Check if this user has Super Administrator role
+                    roles = db.execute(
+                        text("""
+                            SELECT r.name FROM roles r
+                            JOIN user_roles ur ON ur.role_id = r.id
+                            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+                        """),
+                        {"user_id": user_row.id}
+                    ).scalars().all()
+                    
+                    if roles:
+                        super_admin_user = user_row
+                        super_admin_tenant = tenant
+                        break
+            except Exception as e:
+                # If there's an error with this tenant, continue to the next one
+                print(f"Error checking tenant {tenant.slug}: {e}")
+                continue
         
         if not super_admin_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or not a Super Administrator")

@@ -71,6 +71,22 @@ def list_users(
     status: Optional[str] = Query(None)
 ):
     """List all users with their roles and permissions."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can access user management."
+        )
+    
     query = """
         SELECT u.id, u.email, u.full_name, u.is_active, u.created_at, u.updated_at,
                STRING_AGG(r.name, ', ') as roles
@@ -123,6 +139,22 @@ def create_user(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Create a new user."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": current_user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can create users."
+        )
+    
     from app.services.security import hash_password
     
     # Check if user already exists
@@ -172,6 +204,22 @@ def update_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": current_user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can update users."
+        )
+
     # Build update query
     update_fields = []
     params = {"id": user_id}
@@ -244,6 +292,22 @@ def delete_user(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": current_user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can delete users."
+        )
+
     # Delete user roles first
     db.execute(text("DELETE FROM user_roles WHERE user_id = :id"), {"id": user_id})
     
@@ -260,6 +324,22 @@ def list_roles(
     user_id: int = Depends(get_current_user_id)
 ):
     """List all roles with their permissions and user counts."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can access role management."
+        )
+    
     query = """
         SELECT r.id, r.name, r.description, r.created_at, r.updated_at,
                STRING_AGG(p.name, ', ') as permissions,
@@ -296,6 +376,22 @@ def create_role(
     current_user_id: int = Depends(get_current_user_id)
 ):
     """Create a new role."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": current_user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can create roles."
+        )
+    
     # Check if role already exists
     existing = db.execute(text("SELECT id FROM roles WHERE name = :name"), {"name": role_data.name}).scalar()
     if existing:
@@ -435,6 +531,22 @@ def list_permissions(
     user_id: int = Depends(get_current_user_id)
 ):
     """List all available permissions."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can access permission management."
+        )
+    
     query = """
         SELECT id, name, description, created_at
         FROM permissions
@@ -587,6 +699,22 @@ def get_system_info(
     user_id: int = Depends(get_current_user_id)
 ):
     """Get system statistics and information."""
+    # Check if user is a Super Administrator
+    super_admin_check = db.execute(
+        text("""
+            SELECT COUNT(*) FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = :user_id AND r.name = 'Super Administrator'
+        """),
+        {"user_id": user_id}
+    ).scalar()
+    
+    if super_admin_check == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Access denied. Only Super Administrators can access system information."
+        )
+    
     # Count users
     user_count = db.execute(text("SELECT COUNT(*) FROM users")).scalar()
     active_users = db.execute(text("SELECT COUNT(*) FROM users WHERE is_active = true")).scalar()
@@ -812,4 +940,161 @@ def super_admin_system_info():
         }
     finally:
         db.close()
+
+
+# Tenant-Specific Settings Endpoints (for regular users)
+@router.get("/tenant/users", response_model=List[UserRead], dependencies=[Depends(require_permissions(["settings.manage"]))])
+def list_tenant_users(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id),
+    q: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    status: Optional[str] = Query(None)
+):
+    """List users in the current tenant (for regular users)."""
+    query = """
+        SELECT u.id, u.email, u.full_name, u.is_active, u.created_at, u.updated_at,
+               STRING_AGG(r.name, ', ') as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
+        WHERE 1=1
+    """
+    params = {}
+    
+    if q:
+        query += " AND (LOWER(u.email) LIKE :q OR LOWER(u.full_name) LIKE :q)"
+        params["q"] = f"%{q.lower()}%"
+    
+    if role:
+        query += " AND r.name = :role"
+        params["role"] = role
+    
+    if status:
+        if status == "active":
+            query += " AND u.is_active = true"
+        elif status == "inactive":
+            query += " AND u.is_active = false"
+    
+    query += " GROUP BY u.id, u.email, u.full_name, u.is_active, u.created_at, u.updated_at"
+    query += " ORDER BY u.created_at DESC"
+    
+    rows = db.execute(text(query), params).mappings().all()
+    
+    # Convert to UserRead format
+    users = []
+    for row in rows:
+        roles_list = row.roles.split(', ') if row.roles else []
+        users.append(UserRead(
+            id=row.id,
+            email=row.email,
+            full_name=row.full_name or "Unknown User",
+            is_active=row.is_active,
+            created_at=str(row.created_at),
+            updated_at=str(row.updated_at),
+            roles=roles_list
+        ))
+    
+    return users
+
+
+@router.get("/tenant/roles", response_model=List[RoleRead], dependencies=[Depends(require_permissions(["settings.manage"]))])
+def list_tenant_roles(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """List roles in the current tenant (for regular users)."""
+    query = """
+        SELECT r.id, r.name, r.description, r.created_at, r.updated_at,
+               STRING_AGG(p.name, ', ') as permissions,
+               COUNT(DISTINCT ur.user_id) as user_count
+        FROM roles r
+        LEFT JOIN role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN permissions p ON rp.permission_id = p.id
+        LEFT JOIN user_roles ur ON r.id = ur.role_id
+        GROUP BY r.id, r.name, r.description, r.created_at, r.updated_at
+        ORDER BY r.name
+    """
+    
+    rows = db.execute(text(query)).mappings().all()
+    
+    roles = []
+    for row in rows:
+        permissions_list = row.permissions.split(', ') if row.permissions else []
+        roles.append(RoleRead(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            created_at=str(row.created_at),
+            updated_at=str(row.updated_at),
+            permissions=permissions_list,
+            user_count=row.user_count
+        ))
+    
+    return roles
+
+
+@router.get("/tenant/permissions", response_model=List[PermissionRead], dependencies=[Depends(require_permissions(["settings.manage"]))])
+def list_tenant_permissions(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """List permissions in the current tenant (for regular users)."""
+    query = """
+        SELECT id, name, description, created_at
+        FROM permissions
+        ORDER BY name
+    """
+    
+    rows = db.execute(text(query)).mappings().all()
+    
+    permissions = []
+    for row in rows:
+        permissions.append(PermissionRead(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            created_at=str(row.created_at)
+        ))
+    
+    return permissions
+
+
+@router.get("/tenant/system-info", dependencies=[Depends(require_permissions(["settings.manage"]))])
+def get_tenant_system_info(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Get tenant-specific system statistics and information."""
+    # Count users in current tenant
+    user_count = db.execute(text("SELECT COUNT(*) FROM users")).scalar()
+    active_users = db.execute(text("SELECT COUNT(*) FROM users WHERE is_active = true")).scalar()
+    
+    # Count roles in current tenant
+    role_count = db.execute(text("SELECT COUNT(*) FROM roles")).scalar()
+    
+    # Count permissions in current tenant
+    permission_count = db.execute(text("SELECT COUNT(*) FROM permissions")).scalar()
+    
+    # Get recent activity (last 5 users created)
+    recent_users = db.execute(
+        text("SELECT email, full_name, created_at FROM users ORDER BY created_at DESC LIMIT 5")
+    ).mappings().all()
+    
+    return {
+        "statistics": {
+            "total_users": user_count,
+            "active_users": active_users,
+            "total_roles": role_count,
+            "total_permissions": permission_count
+        },
+        "recent_users": [
+            {
+                "email": user.email,
+                "full_name": user.full_name,
+                "created_at": str(user.created_at)
+            }
+            for user in recent_users
+        ]
+    }
 
