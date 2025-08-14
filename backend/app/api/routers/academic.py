@@ -12,7 +12,8 @@ from app.schemas.academic import (
     ClassSubjectCreate, ClassSubjectRead,
     AttendanceCreate, AttendanceRead, AttendanceUpdate,
     AcademicRecordCreate, AcademicRecordRead, AcademicRecordUpdate,
-    BulkAttendanceCreate, StudentAcademicSummary
+    BulkAttendanceCreate, StudentAcademicSummary,
+    ExamScheduleCreate, ExamScheduleRead, ExamScheduleUpdate
 )
 from app.tenancy.deps import get_tenant_db
 from app.api.deps import require_roles, require_permissions, get_current_user_id
@@ -496,13 +497,320 @@ def get_student_academic_summary(
     scores = [r.score for r in records if r.score is not None]
     average_score = sum(scores) / len(scores) if scores else None
     
-    return StudentAcademicSummary(
-        student_id=student_id,
-        student_name=student.student_name,
-        class_name=student.class_name,
-        term=term,
-        academic_year=academic_year,
-        subjects=[AcademicRecordRead(**dict(r)) for r in records],
-        average_score=average_score,
-        total_subjects=len(records)
-    )
+        return StudentAcademicSummary(
+            student_id=student_id,
+            student_name=student.student_name,
+            class_name=student.class_name,
+            term=term,
+            academic_year=academic_year,
+            subjects=[AcademicRecordRead(**dict(r)) for r in records],
+            average_score=average_score,
+            total_subjects=len(records)
+        )
+
+
+# Exam Schedule Management
+@router.get("/exam-schedules", response_model=List[ExamScheduleRead], dependencies=[Depends(require_permissions(["academic.read"]))])
+def list_exam_schedules(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None)
+):
+    query = """
+        SELECT es.*, s.name as subject_name, c.name as class_name
+        FROM exam_schedules es
+        JOIN subjects s ON es.subject_id = s.id
+        JOIN classes c ON es.class_id = c.id
+        WHERE 1=1
+    """
+    params = {}
+    
+    if class_id:
+        query += " AND es.class_id = :class_id"
+        params["class_id"] = class_id
+    if subject_id:
+        query += " AND es.subject_id = :subject_id"
+        params["subject_id"] = subject_id
+    
+    query += " ORDER BY es.exam_date, es.start_time"
+    
+    rows = db.execute(text(query), params).mappings().all()
+    return [ExamScheduleRead(**dict(r)) for r in rows]
+
+
+@router.post("/exam-schedules", response_model=ExamScheduleRead, dependencies=[Depends(require_permissions(["academic.manage"]))])
+def create_exam_schedule(payload: ExamScheduleCreate, db: Session = Depends(get_tenant_db)):
+    try:
+        db.execute(
+            text("""
+                INSERT INTO exam_schedules(title, subject_id, class_id, exam_date, start_time, duration, total_marks)
+                VALUES (:title, :subject, :class, :date, :time, :duration, :marks)
+            """),
+            {
+                "title": payload.title,
+                "subject": payload.subject_id,
+                "class": payload.class_id,
+                "date": payload.exam_date,
+                "start_time": payload.start_time,
+                "duration": payload.duration,
+                "marks": payload.total_marks,
+            }
+        )
+        row = db.execute(text("""
+            SELECT es.*, s.name as subject_name, c.name as class_name
+            FROM exam_schedules es
+            JOIN subjects s ON es.subject_id = s.id
+            JOIN classes c ON es.class_id = c.id
+            WHERE es.title = :title AND es.subject_id = :subject AND es.class_id = :class
+        """), {
+            "title": payload.title,
+            "subject": payload.subject_id,
+            "class": payload.class_id
+        }).mappings().first()
+        db.commit()
+        return ExamScheduleRead(**dict(row))
+    except Exception as ex:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(ex))
+
+
+# Exam Schedule Management
+@router.get("/exam-schedules", response_model=List[ExamScheduleRead], dependencies=[Depends(require_permissions(["academic.read"]))])
+def list_exam_schedules(
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None)
+):
+    query = """
+        SELECT es.*, s.name as subject_name, c.name as class_name
+        FROM exam_schedules es
+        JOIN subjects s ON es.subject_id = s.id
+        JOIN classes c ON es.class_id = c.id
+        WHERE 1=1
+    """
+    params = {}
+    
+    if class_id:
+        query += " AND es.class_id = :class_id"
+        params["class_id"] = class_id
+    if subject_id:
+        query += " AND es.subject_id = :subject_id"
+        params["subject_id"] = subject_id
+    
+    query += " ORDER BY es.exam_date, es.start_time"
+    
+    rows = db.execute(text(query), params).mappings().all()
+    return [ExamScheduleRead(**dict(r)) for r in rows]
+
+
+@router.post("/exam-schedules", response_model=ExamScheduleRead, dependencies=[Depends(require_permissions(["academic.manage"]))])
+def create_exam_schedule(payload: ExamScheduleCreate, db: Session = Depends(get_tenant_db)):
+    try:
+        db.execute(
+            text("""
+                INSERT INTO exam_schedules(title, subject_id, class_id, exam_date, start_time, duration, total_marks)
+                VALUES (:title, :subject, :class, :date, :time, :duration, :marks)
+            """),
+            {
+                "title": payload.title,
+                "subject": payload.subject_id,
+                "class": payload.class_id,
+                "date": payload.exam_date,
+                "start_time": payload.start_time,
+                "duration": payload.duration,
+                "marks": payload.total_marks,
+            }
+        )
+        row = db.execute(text("""
+            SELECT es.*, s.name as subject_name, c.name as class_name
+            FROM exam_schedules es
+            JOIN subjects s ON es.subject_id = s.id
+            JOIN classes c ON es.class_id = c.id
+            WHERE es.title = :title AND es.subject_id = :subject AND es.class_id = :class
+        """), {
+            "title": payload.title,
+            "subject": payload.subject_id,
+            "class": payload.class_id
+        }).mappings().first()
+        db.commit()
+        return ExamScheduleRead(**dict(row))
+    except Exception as ex:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(ex))
+
+
+
+
+
+@router.get("/exam-schedules/{exam_id}", response_model=ExamScheduleRead)
+def get_exam_schedule(exam_id: int, db: Session = Depends(get_tenant_db), user_id: int = Depends(get_current_user_id)):
+    row = db.execute(text("""
+        SELECT es.*, s.name as subject_name, c.name as class_name
+        FROM exam_schedules es
+        JOIN subjects s ON es.subject_id = s.id
+        JOIN classes c ON es.class_id = c.id
+        WHERE es.id = :id
+    """), {"id": exam_id}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Exam schedule not found")
+    return ExamScheduleRead(**dict(row))
+
+
+@router.put("/exam-schedules/{exam_id}", response_model=ExamScheduleRead, dependencies=[Depends(require_permissions(["academic.manage"]))])
+def update_exam_schedule(exam_id: int, payload: ExamScheduleUpdate, db: Session = Depends(get_tenant_db)):
+    try:
+        update_fields = []
+        params = {"id": exam_id}
+        
+        if payload.title is not None:
+            update_fields.append("title = :title")
+            params["title"] = payload.title
+        if payload.subject_id is not None:
+            update_fields.append("subject_id = :subject")
+            params["subject"] = payload.subject_id
+        if payload.class_id is not None:
+            update_fields.append("class_id = :class")
+            params["class"] = payload.class_id
+        if payload.exam_date is not None:
+            update_fields.append("exam_date = :date")
+            params["date"] = payload.exam_date
+        if payload.start_time is not None:
+            update_fields.append("start_time = :time")
+            params["time"] = payload.start_time
+        if payload.duration is not None:
+            update_fields.append("duration = :duration")
+            params["duration"] = payload.duration
+        if payload.total_marks is not None:
+            update_fields.append("total_marks = :marks")
+            params["marks"] = payload.total_marks
+        
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        query = f"UPDATE exam_schedules SET {', '.join(update_fields)} WHERE id = :id"
+        
+        db.execute(text(query), params)
+        row = db.execute(text("""
+            SELECT es.*, s.name as subject_name, c.name as class_name
+            FROM exam_schedules es
+            JOIN subjects s ON es.subject_id = s.id
+            JOIN classes c ON es.class_id = c.id
+            WHERE es.id = :id
+        """), {"id": exam_id}).mappings().first()
+        db.commit()
+        return ExamScheduleRead(**dict(row))
+    except Exception as ex:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(ex))
+
+
+@router.delete("/exam-schedules/{exam_id}", dependencies=[Depends(require_permissions(["academic.manage"]))])
+def delete_exam_schedule(exam_id: int, db: Session = Depends(get_tenant_db)):
+    try:
+        db.execute(text("DELETE FROM exam_schedules WHERE id = :id"), {"id": exam_id})
+        db.commit()
+        return {"message": "Exam schedule deleted successfully"}
+    except Exception as ex:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(ex))
+
+
+# Academic Analytics
+@router.get("/analytics/class-performance/{class_id}")
+def get_class_performance(
+    class_id: int,
+    term: str = Query(...),
+    academic_year: str = Query(...),
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    # Get class performance statistics
+    stats = db.execute(text("""
+        SELECT 
+            COUNT(DISTINCT ar.student_id) as total_students,
+            COUNT(ar.id) as total_records,
+            AVG(ar.overall_score) as average_score,
+            MIN(ar.overall_score) as min_score,
+            MAX(ar.overall_score) as max_score,
+            COUNT(CASE WHEN ar.overall_score >= 50 THEN 1 END) as passing_students
+        FROM academic_records ar
+        JOIN students s ON ar.student_id = s.id
+        WHERE ar.class_id = :class_id 
+        AND ar.term = :term 
+        AND ar.academic_year = :year
+        AND ar.overall_score IS NOT NULL
+    """), {
+        "class_id": class_id,
+        "term": term,
+        "year": academic_year
+    }).mappings().first()
+    
+    # Get subject-wise performance
+    subject_stats = db.execute(text("""
+        SELECT 
+            sub.name as subject_name,
+            sub.code as subject_code,
+            AVG(ar.overall_score) as average_score,
+            COUNT(ar.id) as total_records
+        FROM academic_records ar
+        JOIN subjects sub ON ar.subject_id = sub.id
+        WHERE ar.class_id = :class_id 
+        AND ar.term = :term 
+        AND ar.academic_year = :year
+        AND ar.overall_score IS NOT NULL
+        GROUP BY sub.id, sub.name, sub.code
+        ORDER BY average_score DESC
+    """), {
+        "class_id": class_id,
+        "term": term,
+        "year": academic_year
+    }).mappings().all()
+    
+    return {
+        "class_id": class_id,
+        "term": term,
+        "academic_year": academic_year,
+        "statistics": dict(stats) if stats else {},
+        "subject_performance": [dict(s) for s in subject_stats]
+    }
+
+
+@router.get("/analytics/student-progress/{student_id}")
+def get_student_progress(
+    student_id: int,
+    db: Session = Depends(get_tenant_db),
+    user_id: int = Depends(get_current_user_id)
+):
+    # Get student's academic progress over terms
+    progress = db.execute(text("""
+        SELECT 
+            ar.term,
+            ar.academic_year,
+            AVG(ar.overall_score) as average_score,
+            COUNT(ar.id) as subjects_count
+        FROM academic_records ar
+        WHERE ar.student_id = :student_id
+        AND ar.overall_score IS NOT NULL
+        GROUP BY ar.term, ar.academic_year
+        ORDER BY ar.academic_year, ar.term
+    """), {"student_id": student_id}).mappings().all()
+    
+    # Get attendance statistics
+    attendance_stats = db.execute(text("""
+        SELECT 
+            COUNT(*) as total_days,
+            COUNT(CASE WHEN status = 'present' THEN 1 END) as present_days,
+            COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_days,
+            COUNT(CASE WHEN status = 'late' THEN 1 END) as late_days
+        FROM attendance
+        WHERE student_id = :student_id
+    """), {"student_id": student_id}).mappings().first()
+    
+    return {
+        "student_id": student_id,
+        "academic_progress": [dict(p) for p in progress],
+        "attendance_statistics": dict(attendance_stats) if attendance_stats else {}
+    }

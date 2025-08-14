@@ -154,6 +154,39 @@ TENANT_BASE_SCHEMA_SQL = """
         reference_number VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+            CREATE TABLE IF NOT EXISTS exam_schedules (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+            class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+            exam_date DATE NOT NULL,
+            start_time TIME NOT NULL,
+            duration INTEGER DEFAULT 60,
+            total_marks INTEGER DEFAULT 100,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS library_resources (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            author VARCHAR(255),
+            publisher VARCHAR(255),
+            isbn VARCHAR(50),
+            category VARCHAR(100),
+            subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL,
+            class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+            file_path VARCHAR(500) NOT NULL,
+            file_size BIGINT,
+            file_type VARCHAR(50),
+            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            is_active BOOLEAN DEFAULT true,
+            download_count INTEGER DEFAULT 0,
+            tags TEXT[]
+        );
 """
 
 ALTER_TABLES_IF_NEEDED_SQL = """
@@ -217,6 +250,12 @@ class TenantService:
             ("academic.create", "Create academic records"),
             ("academic.update", "Update academic records"),
             ("academic.delete", "Delete academic records"),
+                    ("academic.manage", "Manage academic settings and schedules"),
+        ("academic.attendance", "Manage student attendance"),
+        ("academic.record", "Record academic results"),
+        ("library.read", "Access library resources"),
+        ("library.manage", "Manage library resources"),
+        ("library.upload", "Upload library materials"),
             
             # Teacher management permissions
             ("teachers.read", "View teacher information"),
@@ -278,9 +317,11 @@ class TenantService:
                 "students.read", "students.create", "students.update", "students.delete",
                 "finance.read", "finance.create", "finance.update", "finance.delete",
                 "academic.read", "academic.create", "academic.update", "academic.delete",
+                "academic.manage", "academic.attendance", "academic.record",
                 "teachers.read", "teachers.create", "teachers.update", "teachers.delete",
                 "settings.manage", "dashboard.view", "attendance.read", "attendance.create",
-                "attendance.update", "reports.view", "reports.generate"
+                "attendance.update", "reports.view", "reports.generate",
+                "library.read", "library.manage", "library.upload"
             ],
             "School Administrator": [
                 "students.read", "students.create", "students.update", "students.delete",
@@ -288,13 +329,15 @@ class TenantService:
                 "academic.read", "academic.create", "academic.update",
                 "teachers.read", "teachers.create", "teachers.update",
                 "dashboard.view", "attendance.read", "attendance.create",
-                "attendance.update", "reports.view", "reports.generate"
+                "attendance.update", "reports.view", "reports.generate",
+                "library.read", "library.manage", "library.upload"
             ],
             "Teacher": [
                 "students.read", "students.update",
                 "academic.read", "academic.create", "academic.update",
                 "dashboard.view", "attendance.read", "attendance.create",
-                "attendance.update", "reports.view"
+                "attendance.update", "reports.view",
+                "library.read"
             ],
             "Finance Officer": [
                 "students.read",
@@ -302,7 +345,8 @@ class TenantService:
                 "dashboard.view", "reports.view", "reports.generate"
             ],
             "Student": [
-                "students.read", "academic.read", "dashboard.view"
+                "students.read", "academic.read", "dashboard.view",
+                "library.read"
             ],
             "Parent": [
                 "students.read", "academic.read", "dashboard.view"

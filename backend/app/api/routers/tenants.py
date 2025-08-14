@@ -89,6 +89,20 @@ class TenantStats(BaseModel):
     total_subjects: int
     recent_activity: List[dict]
 
+# Public Endpoints
+@router.get("/public", response_model=List[dict])
+def list_public_tenants():
+    """List available tenants for login (public access)."""
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text("SELECT id, name, slug, is_active FROM public.tenants WHERE is_active = true ORDER BY name")
+        ).mappings().all()
+        return [{"id": row.id, "name": row.name, "slug": row.slug, "is_active": row.is_active} for row in rows]
+    finally:
+        db.close()
+
 # Tenant Management Endpoints (Super Admin only)
 @router.get("", response_model=List[TenantRead])
 def list_tenants(
