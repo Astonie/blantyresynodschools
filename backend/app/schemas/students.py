@@ -10,12 +10,12 @@ class StudentCreate(BaseModel):
     gender: Optional[str] = None
     date_of_birth: Optional[date] = None
     admission_no: Optional[str] = None  # Will be auto-generated if not provided
-    current_class: Optional[str] = None
+    class_name: Optional[str] = None  # Changed from current_class
+    parent_name: Optional[str] = None  # Added to match DB
     parent_phone: Optional[str] = None
     parent_email: Optional[EmailStr] = None
     address: Optional[str] = None
-    emergency_contact: Optional[str] = None
-    emergency_phone: Optional[str] = None
+    student_number: Optional[str] = None  # Added to match DB
 
 
 class StudentUpdate(BaseModel):
@@ -23,13 +23,12 @@ class StudentUpdate(BaseModel):
     last_name: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[date] = None
-    current_class: Optional[str] = None
+    class_name: Optional[str] = None  # Changed from current_class
+    parent_name: Optional[str] = None  # Added to match DB
     parent_phone: Optional[str] = None
     parent_email: Optional[str] = None
     address: Optional[str] = None
-    emergency_contact: Optional[str] = None
-    emergency_phone: Optional[str] = None
-    status: Optional[str] = None
+    student_number: Optional[str] = None  # Added to match DB
 
 
 class StudentRead(BaseModel):
@@ -39,14 +38,12 @@ class StudentRead(BaseModel):
     gender: Optional[str]
     date_of_birth: Optional[date]
     admission_no: str
-    current_class: Optional[str]
+    class_name: Optional[str]  # Changed from current_class
+    parent_name: Optional[str]  # Added field that exists in DB
     parent_phone: Optional[str]
     parent_email: Optional[str]
     address: Optional[str]
-    emergency_contact: Optional[str]
-    emergency_phone: Optional[str]
-    enrollment_date: date
-    status: str
+    student_number: Optional[str]  # Added field that exists in DB
     created_at: datetime
     updated_at: datetime
 

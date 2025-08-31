@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react'
 import { SimpleGrid, Stat, StatLabel, StatNumber, Heading, Box } from '@chakra-ui/react'
 import { useMemo } from 'react'
+import { Navigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 export default function DashboardPage() {
+  const { user } = useAuth()
   const [stats, setStats] = useState<{ students: number; invoices: number; payments: number }>({ students: 0, invoices: 0, payments: 0 })
+
+  // Redirect parents to their dedicated portal
+  const isParent = user?.roles?.includes('Parent') || user?.roles?.includes('Parent (Restricted)')
+  if (isParent) {
+    return <Navigate to="/app/parent" replace />
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -43,6 +52,3 @@ export default function DashboardPage() {
     </>
   )
 }
-
-
-

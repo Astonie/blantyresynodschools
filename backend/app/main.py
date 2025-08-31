@@ -12,6 +12,7 @@ from app.api.routers.teachers import router as teachers_router
 from app.api.routers.settings import router as settings_router
 from app.api.routers.library import router as library_router
 from app.api.routers.communications import router as communications_router
+from app.api.routers.parents import router as parents_router
 from app.db.init_db import init_public
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -52,6 +53,7 @@ app.include_router(teachers_router, prefix="/api/teachers", tags=["teachers"])
 app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
 app.include_router(library_router, prefix="/api/library", tags=["library"])
 app.include_router(communications_router, prefix="/api/communications", tags=["communications"])
+app.include_router(parents_router, prefix="/api/parents", tags=["parents"])
 
 
 @app.on_event("startup")

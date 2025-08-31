@@ -33,7 +33,7 @@ def list_students(
     params: dict = {}
     
     if class_name:
-        query += " AND current_class = :class"
+        query += " AND class_name = :class"
         params["class"] = class_name
     if status:
         query += " AND status = :status"
@@ -57,7 +57,7 @@ def list_students(
         placeholders = ", ".join([f":c{i}" for i, _ in enumerate(class_rows)])
         for i, cname in enumerate(class_rows):
             params[f"c{i}"] = cname
-        query += f" AND current_class IN ({placeholders})"
+        query += f" AND class_name IN ({placeholders})"
 
     query += " ORDER BY first_name, last_name"
     
@@ -120,10 +120,10 @@ def create_student(payload: StudentCreate, db: Session = Depends(get_tenant_db))
         db.execute(
             text("""
                 INSERT INTO students(
-                    first_name, last_name, gender, date_of_birth, admission_no, current_class,
-                    parent_phone, parent_email, address, emergency_contact, emergency_phone
+                    first_name, last_name, gender, date_of_birth, admission_no, class_name,
+                    parent_name, parent_phone, parent_email, address, student_number
                 )
-                VALUES (:fn, :ln, :g, :dob, :adm, :cls, :pp, :pe, :addr, :ec, :eph)
+                VALUES (:fn, :ln, :g, :dob, :adm, :cls, :pn, :pp, :pe, :addr, :sn)
             """),
             {
                 "fn": payload.first_name,
@@ -131,12 +131,12 @@ def create_student(payload: StudentCreate, db: Session = Depends(get_tenant_db))
                 "g": payload.gender,
                 "dob": payload.date_of_birth,
                 "adm": admission_no,
-                "cls": payload.current_class,
+                "cls": payload.class_name,
+                "pn": payload.parent_name,
                 "pp": payload.parent_phone,
                 "pe": payload.parent_email,
                 "addr": payload.address,
-                "ec": payload.emergency_contact,
-                "eph": payload.emergency_phone,
+                "sn": payload.student_number,
             },
         )
         
@@ -194,9 +194,12 @@ def update_student(student_id: int, payload: StudentUpdate, db: Session = Depend
         if payload.date_of_birth is not None:
             update_fields.append("date_of_birth = :dob")
             params["dob"] = payload.date_of_birth
-        if payload.current_class is not None:
-            update_fields.append("current_class = :cls")
-            params["cls"] = payload.current_class
+        if payload.class_name is not None:
+            update_fields.append("class_name = :cls")
+            params["cls"] = payload.class_name
+        if payload.parent_name is not None:
+            update_fields.append("parent_name = :pn")
+            params["pn"] = payload.parent_name
         if payload.parent_phone is not None:
             update_fields.append("parent_phone = :pp")
             params["pp"] = payload.parent_phone
@@ -206,15 +209,9 @@ def update_student(student_id: int, payload: StudentUpdate, db: Session = Depend
         if payload.address is not None:
             update_fields.append("address = :addr")
             params["addr"] = payload.address
-        if payload.emergency_contact is not None:
-            update_fields.append("emergency_contact = :ec")
-            params["ec"] = payload.emergency_contact
-        if payload.emergency_phone is not None:
-            update_fields.append("emergency_phone = :eph")
-            params["eph"] = payload.emergency_phone
-        if payload.status is not None:
-            update_fields.append("status = :status")
-            params["status"] = payload.status
+        if payload.student_number is not None:
+            update_fields.append("student_number = :sn")
+            params["sn"] = payload.student_number
         
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")

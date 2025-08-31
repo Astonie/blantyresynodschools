@@ -15,11 +15,46 @@ import CommunicationsPage from './CommunicationsPage'
 import SettingsPage from './SettingsPage'
 import LibraryPage from './LibraryPage'
 import StudentDetailsPage from './StudentDetailsPage'
+import ParentDashboard from './ParentDashboard'
+import { ParentChildrenPage } from './ParentChildrenPage'
+import { ChildDetailsPage } from './ChildDetailsPage'
 import { AppShell } from '../ui/AppShell'
+import { ParentLayout } from '../components/ParentLayout'
 import { AuthProvider, useAuth } from '../lib/auth'
 
 const isAuthed = () => !!localStorage.getItem('token')
 const isSuperAdminAuthed = () => !!localStorage.getItem('super_admin_token')
+
+function RequireParentRole({ children }: { children: React.ReactNode }) {
+  const { isLoading, user } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <Container display="flex" justifyContent="center" alignItems="center" minH="200px">
+        Loading...
+      </Container>
+    )
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  
+  const isParent = user.roles?.includes('Parent') || user.roles?.includes('Parent (Restricted)')
+  if (!isParent) {
+    return (
+      <Container>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <h2>Access Denied</h2>
+          <p>This area is only accessible to parents.</p>
+          <p>Your roles: {user.roles?.join(', ') || 'None'}</p>
+        </div>
+      </Container>
+    )
+  }
+  
+  return <>{children}</>
+}
 
 function RequirePermission({ perms, children }: { perms: string[]; children: React.ReactNode }) {
   const { isLoading, user, hasAnyPermission } = useAuth()
@@ -87,6 +122,22 @@ export default function App() {
           <Route path="communications" element={<CommunicationsPage />} />
           <Route path="library" element={<RequirePermission perms={["library.read"]}><LibraryPage /></RequirePermission>} />
           <Route path="settings" element={<RequirePermission perms={["settings.manage"]}><SettingsPage /></RequirePermission>} />
+        </Route>
+
+        {/* Parent-specific routes */}
+        <Route
+          path="/app/parent"
+          element={isAuthed() ? (
+            <RequireParentRole>
+              <ParentLayout />
+            </RequireParentRole>
+          ) : <Navigate to="/login" replace />}
+        >
+          <Route index element={<ParentDashboard />} />
+          <Route path="children" element={<ParentChildrenPage />} />
+          <Route path="child/:childId" element={<ChildDetailsPage />} />
+          <Route path="academic" element={<ParentDashboard />} />
+          <Route path="communications" element={<CommunicationsPage />} />
         </Route>
         
         {/* Catch all route */}

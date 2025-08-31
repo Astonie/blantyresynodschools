@@ -22,12 +22,14 @@ import {
 import { HamburgerIcon, CalendarIcon, AtSignIcon, SettingsIcon, EditIcon, ChatIcon, StarIcon, InfoIcon } from '@chakra-ui/icons'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { useRBAC } from '../lib/rbac'
 
 export function AppShell() {
   const navigate = useNavigate()
 	const [tenant, setTenant] = useState(localStorage.getItem('tenant') || '')
 	const [tenants, setTenants] = useState<Array<{ id: number; name: string; slug: string }>>([])
 	const { isOpen, onOpen, onClose } = useDisclosure()
+	const { getAccessibleMenuItems, user } = useRBAC()
 
 	useEffect(() => {
 		const load = async () => {
@@ -75,6 +77,20 @@ export function AppShell() {
   const primary = branding?.primary_color || undefined
   const headerStyle = primary ? { color: primary } as React.CSSProperties : undefined
 
+	// Icon mapping helper
+	const getIcon = (iconName: string) => {
+		switch (iconName) {
+			case 'StarIcon': return <StarIcon />
+			case 'EditIcon': return <EditIcon />
+			case 'CalendarIcon': return <CalendarIcon />
+			case 'AtSignIcon': return <AtSignIcon />
+			case 'ChatIcon': return <ChatIcon />
+			case 'InfoIcon': return <InfoIcon />
+			case 'SettingsIcon': return <SettingsIcon />
+			default: return <StarIcon />
+		}
+	}
+
   return (
     <Flex minH="100vh" bg="gray.50">
 			{/* Sidebar */}
@@ -99,15 +115,11 @@ export function AppShell() {
 					</HStack>
 				</Flex>
 				<VStack align="stretch" spacing={1} p={3}>
-					<NavItem to="/app" icon={<StarIcon />}>Dashboard</NavItem>
-					{show('students') && <NavItem to="/app/students" icon={<EditIcon />}>Students</NavItem>}
-					{show('academic') && <NavItem to="/app/academic" icon={<CalendarIcon />}>Academic</NavItem>}
-					{show('teachers') && <NavItem to="/app/teachers" icon={<AtSignIcon />}>Teachers</NavItem>}
-					{show('finance') && <NavItem to="/app/finance" icon={<CalendarIcon />}>Finance</NavItem>}
-					{show('communications') && <NavItem to="/app/communications" icon={<ChatIcon />}>Communications</NavItem>}
-					            {show('library') && <NavItem to="/app/library" icon={<InfoIcon />}>Library</NavItem>}
-					<Divider my={2} />
-					<NavItem to="/app/settings" icon={<SettingsIcon />}>Settings</NavItem>
+					{getAccessibleMenuItems().map((item) => (
+						<NavItem key={item.key} to={item.path} icon={getIcon(item.icon)}>
+							{item.label}
+						</NavItem>
+					))}
 				</VStack>
 			</Box>
 
@@ -122,9 +134,16 @@ export function AppShell() {
 						))}
 					</Select>
 					<Menu>
-						<MenuButton as={Button} rightIcon={<Avatar size="xs" ml={2} name={tenant} />}>Account</MenuButton>
+						<MenuButton as={Button} rightIcon={<Avatar size="xs" ml={2} name={user?.full_name || user?.email || tenant} />}>
+							{user?.full_name || user?.email || 'Account'}
+						</MenuButton>
 						<MenuList>
 							<MenuItem onClick={() => navigate('/')}>Home</MenuItem>
+							{user && (
+								<MenuItem isDisabled>
+									Role: {user.roles?.join(', ') || 'No roles'}
+								</MenuItem>
+							)}
 							<MenuItem onClick={logout}>Logout</MenuItem>
 						</MenuList>
 					</Menu>
@@ -140,15 +159,12 @@ export function AppShell() {
 					<Box bg="white" w="260px" h="100%" p={4} onClick={(e) => e.stopPropagation()}>
 						<Text fontWeight="bold" mb={3} color="brand.600">Menu</Text>
 						<VStack align="stretch" spacing={2}>
-							<NavItem to="/app" onNavigate={onClose} icon={<StarIcon />}>Dashboard</NavItem>
-							<NavItem to="/app/students" onNavigate={onClose} icon={<EditIcon />}>Students</NavItem>
-							<NavItem to="/app/academic" onNavigate={onClose} icon={<CalendarIcon />}>Academic</NavItem>
-							<NavItem to="/app/teachers" onNavigate={onClose} icon={<AtSignIcon />}>Teachers</NavItem>
-							<NavItem to="/app/finance" onNavigate={onClose} icon={<CalendarIcon />}>Finance</NavItem>
-							<NavItem to="/app/communications" onNavigate={onClose} icon={<ChatIcon />}>Communications</NavItem>
-							            <NavItem to="/app/library" onNavigate={onClose} icon={<InfoIcon />}>Library</NavItem>
+							{getAccessibleMenuItems().map((item) => (
+								<NavItem key={item.key} to={item.path} onNavigate={onClose} icon={getIcon(item.icon)}>
+									{item.label}
+								</NavItem>
+							))}
 							<Divider />
-							<NavItem to="/app/settings" onNavigate={onClose} icon={<SettingsIcon />}>Settings</NavItem>
 							<Button onClick={() => { onClose(); logout(); }} variant="ghost" justifyContent="flex-start">Logout</Button>
 						</VStack>
 					</Box>
