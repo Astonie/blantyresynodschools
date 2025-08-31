@@ -27,7 +27,6 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 
 export default function LoginPage() {
-  const [tenantSlug, setTenantSlug] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -37,10 +36,10 @@ export default function LoginPage() {
   const navigate = useNavigate()
 
   const login = async () => {
-    if (!tenantSlug || !username || !password) {
+    if (!username || !password) {
       toast({ 
         title: 'Missing Information', 
-        description: 'Please fill in all fields', 
+        description: 'Please enter your email and password', 
         status: 'warning' 
       })
       return
@@ -48,39 +47,59 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      // Set tenant in localStorage first
-      localStorage.setItem('tenant', tenantSlug)
-      
-      // Attempt login
-      const res = await api.post('/auth/login', { username, password })
+      // Use simplified login endpoint
+      const res = await api.post('/auth/simple-login', { username, password })
       
       if (res.data.access_token) {
         localStorage.setItem('token', res.data.access_token)
+        
+        // Extract tenant from JWT token
+        try {
+          const tokenParts = res.data.access_token.split('.')
+          const payload = JSON.parse(atob(tokenParts[1]))
+          if (payload.tenant) {
+            localStorage.setItem('tenant', payload.tenant)
+          }
+        } catch (tokenError) {
+          console.warn('Could not extract tenant from token:', tokenError)
+        }
+        
         // Notify auth provider immediately to fetch /auth/me
         try { window.dispatchEvent(new Event('auth:updated')) } catch {}
 
-        toast({ 
-          title: 'Login Successful', 
-          description: 'Welcome to Blantyre Synod Schools', 
-          status: 'success' 
-        })
-        
-        // Navigate to the portal
-        navigate('/app', { replace: true })
+        // Determine redirect path based on user role
+        try {
+          const userRes = await api.get('/auth/me')
+          const user = userRes.data
+          let redirectPath = '/app' // default
+          
+          if (user.roles?.includes('Teacher') || user.roles?.includes('Head Teacher')) {
+            redirectPath = '/teacher'
+          } else if (user.roles?.includes('Parent')) {
+            redirectPath = '/parent'
+          }
+
+          toast({ 
+            title: 'Login Successful', 
+            description: 'Welcome to Blantyre Synod Schools', 
+            status: 'success' 
+          })
+          
+          // Navigate to the appropriate portal
+          navigate(redirectPath, { replace: true })
+        } catch (roleError) {
+          // Fallback to default if role check fails
+          navigate('/app', { replace: true })
+        }
       } else {
         throw new Error('No access token received')
       }
     } catch (error: any) {
       console.error('Login failed:', error)
       
-      // Clear tenant if login fails
-      localStorage.removeItem('tenant')
-      
       let errorMessage = 'Login failed. Please check your credentials.'
       if (error?.response?.status === 401) {
-        errorMessage = 'Invalid username or password.'
-      } else if (error?.response?.status === 404) {
-        errorMessage = 'Tenant not found. Please check the tenant slug.'
+        errorMessage = 'Invalid email or password.'
       } else if (error?.response?.data?.detail) {
         errorMessage = error.response.data.detail
       }
@@ -133,30 +152,20 @@ export default function LoginPage() {
                 <Heading size="md" textAlign="center" color="gray.700">
                   Sign In
                 </Heading>
-                
-                <FormControl isRequired>
-                  <FormLabel>Tenant Slug</FormLabel>
-                  <Input
-                    placeholder="e.g., standrews, domasi-mission, hhi"
-                    value={tenantSlug}
-                    onChange={(e) => setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    onKeyPress={handleKeyPress}
-                    size="lg"
-                  />
-                  <Text fontSize="sm" color="gray.500" mt={1}>
-                    Enter your school's unique identifier
-                  </Text>
-                </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <Input
-                    placeholder="Enter your username"
+                    placeholder="Enter your email address"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onKeyPress={handleKeyPress}
                     size="lg"
+                    type="email"
                   />
+                  <Text fontSize="sm" color="gray.500" mt={1}>
+                    Use your school email address
+                  </Text>
                 </FormControl>
 
                 <FormControl isRequired>

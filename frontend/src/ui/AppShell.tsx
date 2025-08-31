@@ -33,6 +33,13 @@ export function AppShell() {
 
 	useEffect(() => {
 		const load = async () => {
+			// Only load tenants for super admins and administrators
+			if (!user?.roles?.some(role => 
+				['Super Admin', 'Administrator', 'Tenant Admin', 'School Administrator'].includes(role)
+			)) {
+				return // Skip tenant loading for teachers and parents
+			}
+			
 			try {
 				const res = await api.get('/tenants')
 				setTenants(res.data || [])
@@ -41,7 +48,7 @@ export function AppShell() {
 			}
 		}
 		load()
-	}, [])
+	}, [user])
 
   const [branding, setBranding] = useState<{ logo_url?: string; primary_color?: string; secondary_color?: string } | null>(null)
   const [enabledModules, setEnabledModules] = useState<string[]>([])
@@ -125,14 +132,19 @@ export function AppShell() {
 
       {/* Content area */}
 			<Flex direction="column" flex="1">
-        <Flex as="header" p={3} bg="white" borderBottomWidth="1px" align="center" gap={4} position="sticky" top={0} zIndex={2}>
+				<Flex as="header" p={3} bg="white" borderBottomWidth="1px" align="center" gap={4} position="sticky" top={0} zIndex={2}>
 					<IconButton aria-label="Open menu" icon={<HamburgerIcon />} variant="ghost" display={{ base: 'inline-flex', md: 'none' }} onClick={onOpen} />
 					<Spacer />
-					<Select width={{ base: '140px', md: '220px' }} value={tenant} onChange={(e) => onTenantChange(e.target.value)} placeholder="Select tenant">
-						{tenants.map((t) => (
-							<option key={t.id} value={t.slug}>{t.name}</option>
-						))}
-					</Select>
+					{/* Only show tenant selector for admins */}
+					{user?.roles?.some(role => 
+						['Super Admin', 'Administrator', 'Tenant Admin', 'School Administrator'].includes(role)
+					) && (
+						<Select width={{ base: '140px', md: '220px' }} value={tenant} onChange={(e) => onTenantChange(e.target.value)} placeholder="Select tenant">
+							{tenants.map((t) => (
+								<option key={t.id} value={t.slug}>{t.name}</option>
+							))}
+						</Select>
+					)}
 					<Menu>
 						<MenuButton as={Button} rightIcon={<Avatar size="xs" ml={2} name={user?.full_name || user?.email || tenant} />}>
 							{user?.full_name || user?.email || 'Account'}

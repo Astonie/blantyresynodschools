@@ -12,7 +12,7 @@ export default function DashboardPage() {
   // Redirect parents to their dedicated portal
   const isParent = user?.roles?.includes('Parent') || user?.roles?.includes('Parent (Restricted)')
   if (isParent) {
-    return <Navigate to="/app/parent" replace />
+    return <Navigate to="/parent" replace />
   }
 
   useEffect(() => {

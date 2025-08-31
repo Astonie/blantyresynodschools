@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -9,6 +9,94 @@ from app.api.deps import get_current_user_id
 
 
 router = APIRouter()
+
+
+@router.post("/simple-login", response_model=Token)
+def simple_login(payload: LoginRequest):
+    """Simplified login that auto-detects tenant from email domain"""
+    from app.db.session import SessionLocal
+    
+    # Extract domain from email to determine tenant
+    email_domain = payload.username.split('@')[-1]
+    tenant_slug = None
+    
+    # Map email domains to tenant slugs
+    domain_mapping = {
+        'parent.ndirande-high.edu': 'ndirande-high',
+        'ndirande-high.edu': 'ndirande-high',
+        'teacher.ndirande-high.edu': 'ndirande-high',
+        'admin.ndirande-high.edu': 'ndirande-high',
+    }
+    
+    # Check if we have a direct mapping
+    if email_domain in domain_mapping:
+        tenant_slug = domain_mapping[email_domain]
+    else:
+        # Fallback: try to extract tenant from email pattern
+        if 'ndirande' in email_domain.lower():
+            tenant_slug = 'ndirande-high'
+        else:
+            # Try to find tenant by partial matching
+            public_db = SessionLocal()
+            try:
+                # Look for tenant by slug pattern
+                domain_parts = email_domain.replace('.edu', '').replace('.', '-').split('-')
+                for part in domain_parts:
+                    if len(part) > 2:  # Ignore very short parts
+                        tenant_row = public_db.execute(
+                            text("SELECT slug FROM public.tenants WHERE slug ILIKE :pattern"),
+                            {"pattern": f"%{part}%"}
+                        ).first()
+                        if tenant_row:
+                            tenant_slug = tenant_row.slug
+                            break
+            finally:
+                public_db.close()
+        
+        if not tenant_slug:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Could not determine school from email address. Please contact your administrator."
+            )
+    
+    # Now connect to tenant database and authenticate
+    from app.db.session import tenant_session
+    from app.tenancy.service import TenantService
+    
+    # First, get the tenant's schema name
+    public_db = SessionLocal()
+    try:
+        tenant_service = TenantService(public_db)
+        tenant = tenant_service.get_by_slug(tenant_slug)
+        if not tenant:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid school configuration"
+            )
+        schema_name = tenant.schema_name
+    finally:
+        public_db.close()
+    
+    # Now connect to tenant database
+    with tenant_session(schema_name) as tenant_db:
+        user_row = tenant_db.execute(
+            text("SELECT id, email, hashed_password, is_active FROM users WHERE email = :email"),
+            {"email": payload.username}
+        ).first()
+        
+        if not user_row:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        if not verify_password(payload.password, user_row.hashed_password):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        if not user_row.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
+
+        # Create token with tenant context
+        token = create_access_token(
+            subject=str(user_row.id),
+            extra={"tenant": tenant_slug}
+        )
+        return Token(access_token=token)
 
 
 @router.post("/login", response_model=Token)
@@ -55,35 +143,68 @@ def super_admin_login(payload: LoginRequest):
 
 
 @router.get("/me")
-def me(db: Session = Depends(get_tenant_db), user_id: int = Depends(get_current_user_id)):
-    user = db.execute(text("SELECT id, email, full_name, is_active FROM users WHERE id=:id"), {"id": user_id}).mappings().first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    roles = db.execute(
-        text(
-            """
-            SELECT r.name FROM roles r
-            JOIN user_roles ur ON ur.role_id = r.id
-            WHERE ur.user_id = :uid
-            """
-        ),
-        {"uid": user_id},
-    ).scalars().all()
-    permissions = db.execute(
-        text(
-            """
-            SELECT DISTINCT p.name
-            FROM permissions p
-            JOIN role_permissions rp ON rp.permission_id = p.id
-            JOIN user_roles ur ON ur.role_id = rp.role_id
-            WHERE ur.user_id = :uid
-            """
-        ),
-        {"uid": user_id},
-    ).scalars().all()
-    data = dict(user)
-    data.update({"roles": roles, "permissions": permissions})
-    return data
+def me(request: Request, user_id: int = Depends(get_current_user_id)):
+    """Get current user info using tenant from JWT token"""
+    from app.db.session import SessionLocal, tenant_session
+    from jose import jwt
+    from app.core.config import settings
+    
+    # Extract token and get tenant
+    auth_header = request.headers.get('authorization', '')
+    if not auth_header.lower().startswith('bearer '):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+    
+    token = auth_header.split(' ', 1)[1]
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        tenant_slug = payload.get("tenant")
+        if not tenant_slug:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No tenant in token")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    
+    # Get tenant schema from slug
+    public_db = SessionLocal()
+    try:
+        from app.tenancy.service import TenantService
+        tenant_service = TenantService(public_db)
+        tenant = tenant_service.get_by_slug(tenant_slug)
+        if not tenant:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+        schema_name = tenant.schema_name
+    finally:
+        public_db.close()
+    
+    # Now get user data from tenant database
+    with tenant_session(schema_name) as tenant_db:
+        user = tenant_db.execute(text("SELECT id, email, full_name, is_active FROM users WHERE id=:id"), {"id": user_id}).mappings().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        roles = tenant_db.execute(
+            text(
+                """
+                SELECT r.name FROM roles r
+                JOIN user_roles ur ON ur.role_id = r.id
+                WHERE ur.user_id = :uid
+                """
+            ),
+            {"uid": user_id},
+        ).scalars().all()
+        permissions = tenant_db.execute(
+            text(
+                """
+                SELECT DISTINCT p.name
+                FROM permissions p
+                JOIN role_permissions rp ON rp.permission_id = p.id
+                JOIN user_roles ur ON ur.role_id = rp.role_id
+                WHERE ur.user_id = :uid
+                """
+            ),
+            {"uid": user_id},
+        ).scalars().all()
+        data = dict(user)
+        data.update({"roles": roles, "permissions": permissions})
+        return data
 
 
 @router.get("/super-admin/me")

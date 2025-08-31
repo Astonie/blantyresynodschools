@@ -91,14 +91,26 @@ export default function ParentDashboard() {
   useEffect(() => {
     const fetchChildren = async () => {
       try {
+        console.log('Fetching children for parent...')
         const response = await api.get('/parents/children')
         const childrenData = response.data
+        console.log('Children data received:', childrenData)
         setChildren(childrenData)
         if (childrenData.length > 0) {
           setSelectedChild(childrenData[0])
+          console.log('Selected child:', childrenData[0])
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching children:', error)
+        console.error('Error details:', error.response?.data)
+        
+        // Handle specific error cases
+        if (error?.response?.status === 403) {
+          console.error('Access denied to parent resources')
+        } else if (error?.response?.status === 404) {
+          console.log('No children found for this parent')
+          setChildren([])
+        }
       } finally {
         setLoading(false)
       }
@@ -107,20 +119,10 @@ export default function ParentDashboard() {
     fetchChildren()
   }, [])
 
-  // Load communications
+  // Load communications - placeholder since API not implemented
   useEffect(() => {
-    const fetchCommunications = async () => {
-      try {
-        const response = await api.get('/communications', {
-          params: { role: 'parent', limit: 20 }
-        })
-        setCommunications(response.data || [])
-      } catch (error) {
-        console.error('Error fetching communications:', error)
-      }
-    }
-
-    fetchCommunications()
+    // Set empty communications array since API doesn't exist yet
+    setCommunications([])
   }, [])
 
   // Load selected child's report card
@@ -128,10 +130,18 @@ export default function ParentDashboard() {
     if (selectedChild) {
       const fetchReportCard = async () => {
         try {
-          const response = await api.get(`/parents/children/${selectedChild.id}/report-card`)
+          console.log('Fetching report card for child:', selectedChild.id)
+          const response = await api.get(`/parents/children/${selectedChild.id}/report-card`, {
+            params: {
+              academic_year: '2024',
+              term: 'Term 1 Final'
+            }
+          })
+          console.log('Report card response:', response.data)
           setReportCard(response.data)
         } catch (error) {
           console.error('Error fetching report card:', error)
+          console.error('Error details:', error.response?.data)
           setReportCard(null)
         }
       }

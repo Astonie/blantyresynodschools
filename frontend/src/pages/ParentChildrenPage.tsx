@@ -73,47 +73,58 @@ export function ParentChildrenPage() {
     const fetchChildrenData = async () => {
       try {
         setLoading(true)
+        console.log('Fetching children data...')
         
         // Fetch children basic info
         const childrenResponse = await api.get('/parents/children')
         const childrenData = childrenResponse.data || []
+        console.log('Children received:', childrenData)
 
         // Fetch additional data for each child
         const enhancedChildren = await Promise.all(
           childrenData.map(async (child: Child) => {
             try {
-              // Get academic summary
-              const academicResponse = await api.get(`/students/${child.id}/academic-summary`)
-              const academicData = academicResponse.data || {}
-
-              // Get communications count
-              const commResponse = await api.get('/communications', {
-                params: { child_id: child.id, unread_only: true }
+              // Get academic report card
+              const reportResponse = await api.get(`/parents/children/${child.id}/report-card`, {
+                params: {
+                  academic_year: '2024',
+                  term: 'Term 1 Final'
+                }
               })
-              const unreadCount = commResponse.data?.length || 0
+              const reportData = reportResponse.data || {}
+              console.log(`Report card for child ${child.id}:`, reportData)
+
+              // Communications count - placeholder since API doesn't exist yet
+              const unreadCount = 0
 
               return {
                 ...child,
-                gpa: academicData.gpa,
-                average_percentage: academicData.average_percentage,
-                total_subjects: academicData.total_subjects || 0,
+                gpa: reportData.overall_gpa || 0,
+                average_percentage: reportData.term_average || 0,
+                total_subjects: reportData.total_subjects || 0,
                 unread_communications: unreadCount,
-                last_activity: academicData.last_activity,
-                attendance_percentage: academicData.attendance_percentage || 95
+                last_activity: new Date().toISOString(),
+                attendance_percentage: 85 // Placeholder since we don't have attendance API
               }
-            } catch (err) {
-              console.error(`Error fetching data for child ${child.id}:`, err)
+
+            } catch (error) {
+              console.error(`Error fetching data for child ${child.id}:`, error)
+              // Return child with default values if academic data fails
               return {
                 ...child,
-                unread_communications: 0,
+                gpa: 0,
+                average_percentage: 0,
                 total_subjects: 0,
-                attendance_percentage: 95
+                unread_communications: 0,
+                last_activity: null,
+                attendance_percentage: 0
               }
             }
           })
         )
 
         setChildren(enhancedChildren)
+        console.log('Enhanced children data:', enhancedChildren)
       } catch (err: any) {
         console.error('Error fetching children:', err)
         setError(err.response?.data?.detail || 'Failed to load children information')
@@ -286,7 +297,7 @@ export function ParentChildrenPage() {
                       <Text fontSize="sm" color="gray.500">No academic data yet</Text>
                     )}
                     
-                    {child.total_subjects > 0 && (
+                    {(child.total_subjects || 0) > 0 && (
                       <Text fontSize="sm" color="gray.600">
                         Enrolled in {child.total_subjects} subject{child.total_subjects !== 1 ? 's' : ''}
                       </Text>
@@ -299,16 +310,16 @@ export function ParentChildrenPage() {
                     </Text>
                     <VStack align="start" spacing={1}>
                       <Progress 
-                        value={child.attendance_percentage} 
+                        value={child.attendance_percentage || 0} 
                         colorScheme={
-                          child.attendance_percentage >= 95 ? 'green' :
-                          child.attendance_percentage >= 85 ? 'yellow' : 'red'
+                          (child.attendance_percentage || 0) >= 95 ? 'green' :
+                          (child.attendance_percentage || 0) >= 85 ? 'yellow' : 'red'
                         }
                         size="sm"
                         w="80px"
                       />
                       <Text fontSize="sm" fontWeight="medium">
-                        {child.attendance_percentage}%
+                        {child.attendance_percentage || 0}%
                       </Text>
                     </VStack>
                   </VStack>
@@ -359,7 +370,7 @@ export function ParentChildrenPage() {
                     colorScheme="blue"
                     variant="solid"
                     size="sm"
-                    onClick={() => navigate(`/app/parent/child/${child.id}`)}
+                    onClick={() => navigate(`/parent/child/${child.id}`)}
                   >
                     View Details
                   </Button>
@@ -370,7 +381,7 @@ export function ParentChildrenPage() {
                       colorScheme="green"
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/app/parent/child/${child.id}?tab=academic`)}
+                      onClick={() => navigate(`/parent/child/${child.id}?tab=academic`)}
                     >
                       Academic
                     </Button>
@@ -380,7 +391,7 @@ export function ParentChildrenPage() {
                       colorScheme="orange"
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/app/parent/communications?child=${child.id}`)}
+                      onClick={() => navigate(`/parent/communications?child=${child.id}`)}
                       position="relative"
                     >
                       Messages
@@ -428,14 +439,14 @@ export function ParentChildrenPage() {
               <Button
                 leftIcon={<FaComments />}
                 colorScheme="blue"
-                onClick={() => navigate('/app/parent/communications')}
+                onClick={() => navigate('/parent/communications')}
               >
                 All Communications ({totalUnreadComms})
               </Button>
               <Button
                 leftIcon={<FaChartLine />}
                 colorScheme="green"
-                onClick={() => navigate('/app/parent/academic')}
+                onClick={() => navigate('/parent/academic')}
               >
                 Academic Overview
               </Button>
@@ -443,7 +454,7 @@ export function ParentChildrenPage() {
                 leftIcon={<FaInfoCircle />}
                 colorScheme="gray"
                 variant="outline"
-                onClick={() => navigate('/app/parent/settings')}
+                onClick={() => navigate('/parent/settings')}
               >
                 Settings
               </Button>

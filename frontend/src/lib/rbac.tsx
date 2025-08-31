@@ -115,7 +115,43 @@ export function useRBAC() {
 
   // Get accessible menu items based on permissions
   const getAccessibleMenuItems = () => {
-    const allMenuItems = [
+    // Check if user is a teacher
+    const isTeacher = hasAnyRole(['Teacher', 'Head Teacher'])
+    
+    // Teacher-specific menu items
+    const teacherMenuItems = [
+      { 
+        key: 'dashboard', 
+        label: 'Dashboard', 
+        path: '/teacher/dashboard',
+        icon: 'StarIcon',
+        alwaysShow: true 
+      },
+      { 
+        key: 'grades', 
+        label: 'Grade Management', 
+        path: '/teacher/grades',
+        icon: 'EditIcon',
+        role: 'Teacher'
+      },
+      { 
+        key: 'attendance', 
+        label: 'Attendance', 
+        path: '/teacher/attendance',
+        icon: 'CalendarIcon',
+        role: 'Teacher'
+      },
+      { 
+        key: 'communications', 
+        label: 'Communications', 
+        path: '/teacher/communications',
+        icon: 'ChatIcon',
+        role: 'Teacher'
+      }
+    ]
+    
+    // Regular admin menu items
+    const adminMenuItems = [
       { 
         key: 'dashboard', 
         label: 'Dashboard', 
@@ -181,10 +217,13 @@ export function useRBAC() {
       }
     ]
 
+    // Use teacher menu for teachers, admin menu for others
+    const allMenuItems = isTeacher ? teacherMenuItems : adminMenuItems
+
     return allMenuItems.filter(item => {
-      if (item.alwaysShow) return true
-      if (item.permission) return hasPermission(item.permission)
-      if (item.role) return hasRole(item.role)
+      if ('alwaysShow' in item && item.alwaysShow) return true
+      if ('permission' in item && item.permission) return hasPermission(item.permission)
+      if ('role' in item && item.role) return hasRole(item.role) || hasRole('Head Teacher')
       return false
     })
   }

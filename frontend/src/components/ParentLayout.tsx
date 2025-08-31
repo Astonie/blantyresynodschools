@@ -40,25 +40,54 @@ export function ParentLayout() {
   const [children, setChildren] = useState<Child[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [tenant, setTenant] = useState(localStorage.getItem('tenant') || '')
+  const [apiErrors, setApiErrors] = useState<string[]>([])
 
   useEffect(() => {
     const fetchChildren = async () => {
       try {
+        console.log('ParentLayout: Fetching children for user:', user?.email)
+        console.log('ParentLayout: Current tenant:', tenant)
+        console.log('ParentLayout: Token exists:', !!localStorage.getItem('token'))
+        
         const response = await api.get('/parents/children')
+        console.log('ParentLayout: Children API response:', response.data)
         setChildren(response.data || [])
-      } catch (error) {
-        console.error('Error fetching children:', error)
+        
+        // Remove error if successful
+        setApiErrors(prev => prev.filter(err => !err.includes('children')))
+      } catch (error: any) {
+        console.error('ParentLayout: Error fetching children:', {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          data: error?.response?.data,
+          message: error?.message,
+          url: error?.config?.url,
+          headers: error?.config?.headers
+        })
+        
+        const errorMsg = `Children API Error: ${error?.response?.status} - ${error?.response?.data?.detail || error?.message}`
+        setApiErrors(prev => [...prev.filter(err => !err.includes('children')), errorMsg])
       }
     }
 
     const fetchUnreadCommunications = async () => {
       try {
-        const response = await api.get('/communications', {
-          params: { unread_only: true }
+        console.log('ParentLayout: Fetching unread communications')
+        // Communications API not implemented yet - set to 0
+        setUnreadCount(0)
+        
+        // Remove error if successful
+        setApiErrors(prev => prev.filter(err => !err.includes('communications')))
+      } catch (error: any) {
+        console.error('ParentLayout: Error fetching communications:', {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          data: error?.response?.data,
+          message: error?.message
         })
-        setUnreadCount(response.data?.length || 0)
-      } catch (error) {
-        console.error('Error fetching unread communications:', error)
+        
+        const errorMsg = `Communications API Error: ${error?.response?.status} - ${error?.response?.data?.detail || error?.message}`
+        setApiErrors(prev => [...prev.filter(err => !err.includes('communications')), errorMsg])
       }
     }
 
@@ -66,23 +95,46 @@ export function ParentLayout() {
       fetchChildren()
       fetchUnreadCommunications()
     }
-  }, [user])
+  }, [user, tenant])
 
   const logout = () => {
+    console.log('ParentLayout: Manual logout triggered')
     localStorage.removeItem('token')
+    localStorage.removeItem('tenant')
     navigate('/login', { replace: true })
   }
 
   // Check if user has parent role
   const isParent = user?.roles?.includes('Parent') || user?.roles?.includes('Parent (Restricted)')
 
+  console.log('ParentLayout: User role check:', {
+    user: user?.email,
+    roles: user?.roles,
+    isParent,
+    tenant
+  })
+
   if (!isParent) {
+    console.warn('ParentLayout: Access denied - user is not a parent:', {
+      userId: user?.id,
+      email: user?.email,
+      roles: user?.roles,
+      permissions: user?.permissions
+    })
+    
     return (
       <Box p={6}>
-        <Alert status="error">
+        <Alert status="error" mb={4}>
           <AlertIcon />
           Access Denied: This area is only accessible to parents.
         </Alert>
+        <Box bg="gray.50" p={4} borderRadius="md">
+          <Text fontSize="sm" fontWeight="bold" mb={2}>Debug Information:</Text>
+          <Text fontSize="xs">User: {user?.email}</Text>
+          <Text fontSize="xs">Roles: {user?.roles?.join(', ') || 'None'}</Text>
+          <Text fontSize="xs">Expected: Parent or Parent (Restricted)</Text>
+          <Text fontSize="xs">Check console for full user object</Text>
+        </Box>
       </Box>
     )
   }
@@ -126,22 +178,22 @@ export function ParentLayout() {
 
         {/* Navigation Menu */}
         <VStack align="stretch" spacing={1} p={3}>
-          <ParentNavItem to="/app/parent" icon={<FaHome />}>
+          <ParentNavItem to="/parent" icon={<FaHome />}>
             Dashboard
           </ParentNavItem>
           
-          <ParentNavItem to="/app/parent/children" icon={<FaChild />}>
+          <ParentNavItem to="/parent/children" icon={<FaChild />}>
             My Children
             <Badge ml={2} colorScheme="blue" fontSize="xs">
               {children.length}
             </Badge>
           </ParentNavItem>
 
-          <ParentNavItem to="/app/parent/academic" icon={<FaGraduationCap />}>
+          <ParentNavItem to="/parent/academic" icon={<FaGraduationCap />}>
             Academic Progress
           </ParentNavItem>
 
-          <ParentNavItem to="/app/parent/communications" icon={<FaComments />}>
+          <ParentNavItem to="/parent/communications" icon={<FaComments />}>
             Communications
             {unreadCount > 0 && (
               <Badge ml={2} colorScheme="red" fontSize="xs">
@@ -166,7 +218,7 @@ export function ParentLayout() {
                   bg="gray.50"
                   cursor="pointer"
                   _hover={{ bg: 'blue.50' }}
-                  onClick={() => navigate(`/app/parent/child/${child.id}`)}
+                  onClick={() => navigate(`/parent/child/${child.id}`)}
                 >
                   <HStack>
                     <Avatar size="sm" name={`${child.first_name} ${child.last_name}`} />
@@ -215,7 +267,7 @@ export function ParentLayout() {
             icon={<BellIcon />}
             variant="ghost"
             position="relative"
-            onClick={() => navigate('/app/parent/communications')}
+            onClick={() => navigate('/parent/communications')}
           >
             {unreadCount > 0 && (
               <Badge
@@ -239,10 +291,10 @@ export function ParentLayout() {
               {user?.full_name?.split(' ')[0] || 'Parent'}
             </MenuButton>
             <MenuList>
-              <MenuItem onClick={() => navigate('/app/parent/profile')}>
+              <MenuItem onClick={() => navigate('/parent/profile')}>
                 My Profile
               </MenuItem>
-              <MenuItem onClick={() => navigate('/app/parent/settings')}>
+              <MenuItem onClick={() => navigate('/parent/settings')}>
                 Settings
               </MenuItem>
               <MenuItem onClick={logout} color="red.500">
@@ -254,6 +306,34 @@ export function ParentLayout() {
 
         {/* Main Content */}
         <Box flex="1" bg="gray.50">
+          {/* Development Debug Info */}
+          {apiErrors.length > 0 && (
+            <Alert status="warning" m={4} mb={2}>
+              <AlertIcon />
+              <VStack align="start" spacing={1} flex={1}>
+                <Text fontWeight="bold" fontSize="sm">API Errors (Development Mode):</Text>
+                {apiErrors.map((error, index) => (
+                  <Text key={index} fontSize="xs" fontFamily="mono">
+                    {error}
+                  </Text>
+                ))}
+              </VStack>
+            </Alert>
+          )}
+          
+          {/* Debug information for development */}
+          {process.env.NODE_ENV === 'development' && (
+            <Box bg="yellow.50" border="1px" borderColor="yellow.200" m={4} p={3} borderRadius="md" fontSize="xs">
+              <Text fontWeight="bold" mb={2}>Development Debug Info:</Text>
+              <Text>Tenant: {tenant}</Text>
+              <Text>User: {user?.email}</Text>
+              <Text>Roles: {user?.roles?.join(', ')}</Text>
+              <Text>Children Count: {children.length}</Text>
+              <Text>Token Present: {!!localStorage.getItem('token')}</Text>
+              <Text>API Base URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}</Text>
+            </Box>
+          )}
+          
           <Outlet />
         </Box>
       </Flex>
@@ -266,16 +346,16 @@ export function ParentLayout() {
               <Text fontWeight="bold" color="blue.600">Parent Portal</Text>
             </Box>
             <VStack align="stretch" spacing={2} p={3}>
-              <ParentNavItem to="/app/parent" onNavigate={onClose} icon={<FaHome />}>
+              <ParentNavItem to="/parent" onNavigate={onClose} icon={<FaHome />}>
                 Dashboard
               </ParentNavItem>
-              <ParentNavItem to="/app/parent/children" onNavigate={onClose} icon={<FaChild />}>
+              <ParentNavItem to="/parent/children" onNavigate={onClose} icon={<FaChild />}>
                 My Children
               </ParentNavItem>
-              <ParentNavItem to="/app/parent/academic" onNavigate={onClose} icon={<FaGraduationCap />}>
+              <ParentNavItem to="/parent/academic" onNavigate={onClose} icon={<FaGraduationCap />}>
                 Academic Progress
               </ParentNavItem>
-              <ParentNavItem to="/app/parent/communications" onNavigate={onClose} icon={<FaComments />}>
+              <ParentNavItem to="/parent/communications" onNavigate={onClose} icon={<FaComments />}>
                 Communications
               </ParentNavItem>
               <Button onClick={() => { onClose(); logout(); }} variant="ghost" justifyContent="flex-start" color="red.500" mt={4}>
@@ -297,22 +377,32 @@ interface ParentNavItemProps {
 }
 
 function ParentNavItem({ to, children, icon, onNavigate }: ParentNavItemProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    console.log('ParentNavItem clicked:', { to, children: children?.toString() })
+    if (onNavigate) {
+      onNavigate()
+    }
+  }
+  
   return (
     <NavLink
       to={to}
-      style={({ isActive }) => ({
-        background: isActive ? 'var(--chakra-colors-blue-50)' : 'transparent',
-        borderRadius: '8px',
-        padding: '12px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontWeight: '500',
-        color: isActive ? 'var(--chakra-colors-blue-600)' : 'var(--chakra-colors-gray-700)',
-        borderLeft: isActive ? '3px solid var(--chakra-colors-blue-500)' : '3px solid transparent',
-        transition: 'all 0.2s'
-      })}
-      onClick={onNavigate}
+      style={({ isActive }) => {
+        console.log('ParentNavItem rendering:', { to, isActive })
+        return {
+          background: isActive ? 'var(--chakra-colors-blue-50)' : 'transparent',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontWeight: '500',
+          color: isActive ? 'var(--chakra-colors-blue-600)' : 'var(--chakra-colors-gray-700)',
+          borderLeft: isActive ? '3px solid var(--chakra-colors-blue-500)' : '3px solid transparent',
+          transition: 'all 0.2s'
+        }
+      }}
+      onClick={handleClick}
     >
       {icon}
       <span>{children}</span>
